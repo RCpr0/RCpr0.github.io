@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Level dashboards for two live games — Arsalan Awan</title>
+<meta name="description" content="An AI pipeline that turns pixel art into solver-checked Sand Flow levels, and a level studio for Yarn Collect.">
+<meta property="og:title" content="Level dashboards for two live games — Arsalan Awan">
+<meta property="og:type" content="article">
+<meta property="og:description" content="An AI pipeline that turns pixel art into solver-checked Sand Flow levels, and a level studio for Yarn Collect.">
+<meta name="twitter:card" content="summary_large_image">
+<meta property="og:image" content="https://rcpr0.github.io/og.png">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../css/site.css">
+</head>
+<body>
+<nav class="nav"><div class="wrap">
+  <a class="brand" href="../index.html">Arsalan Awan<span>.</span></a>
+  <ul>
+    <li><a href="../index.html#shipped">Shipped</a></li>
+    <li><a href="../index.html#work">Case studies</a></li>
+    <li><a href="../index.html#prototypes">Prototypes</a></li>
+    <li><a class="btn sm" href="../Arsalan-Awan-CV.pdf" download>Download CV</a></li>
+  </ul>
+</div></nav>
+
+<header class="cs-hero"><div class="wrap">
+  <a class="back" href="../index.html#work">← All case studies</a>
+  <div class="mono" style="margin-top:28px">Sand Flow + Yarn Collect · Level tooling</div>
+  <h1>Level dashboards for two live games</h1>
+  <p class="lede">Hand-building hundreds of puzzle levels doesn't scale, and neither does eyeballing their difficulty. For two live Mindstorm games I built the tools that generate, check, tune and ship levels, so design time goes into decisions rather than busywork.</p>
+  <div class="meta">
+    <div><span>Role</span><b>Designer &amp; tool builder</b></div>
+    <div><span>Games</span><b>Sand Flow, Yarn Collect</b></div>
+    <div><span>Year</span><b>2025 – 2026</b></div>
+    <div><span>Stack</span><b>Python · FastAPI · React · Docker</b></div>
+  </div>
+  <figure class="fig hero-fig" style="margin-top:34px"><img src="../media/tool/sf-collections.webp" alt="Sand Flow dashboard listing generated levels beside their source pixel art, oracle status and difficulty band"></figure>
+</div></header>
+
+<section class="sec"><div class="wrap">
+  <div class="prose reveal">
+    <div class="mono">The problem</div>
+    <h2>500 levels, eight mechanics, one designer</h2>
+    <p>Sand Flow levels are pixel pictures: every coloured bucket in the grid becomes sand that pours into matching containers on a conveyor. Each level also has to be <strong>solvable</strong>, has to land in the right <strong>difficulty band</strong> for its place in the progression, and has to use the game's eight mechanics (generators, ice, mystery buckets, sticky pairs, switches, lock-and-key, pins and chests) in combinations that actually work together.</p>
+    <p>Doing that by hand for 500 levels means spending most of the time on checking rather than designing. So I built a pipeline that does the checking, and a dashboard where I make the calls.</p>
+  </div>
+</div></section>
+
+<section class="sec" style="padding-top:20px"><div class="wrap">
+  <div class="mono reveal">Sand Flow · What I built</div>
+
+  <div class="step reveal">
+    <div>
+      <div class="num">01 — Art in</div>
+      <h3>Pictures become palettes</h3>
+      <p>The pipeline starts from an image, either AI-generated or curated, and quantizes it into a small palette of pixel art. The palette size sets how many colours the level has, which is one of the strongest difficulty levers in the game.</p>
+    </div>
+    <div style="display:flex;align-items:center;gap:18px;justify-content:center">
+      <img src="../media/tool/gen-raw.webp" alt="Source image of a sneaker" loading="lazy" style="width:42%;border-radius:14px;border:1px solid var(--line)">
+      <span class="mono" style="font-size:22px">→</span>
+      <img src="../media/tool/gen-quant.webp" alt="The same sneaker quantized into level pixel art" loading="lazy" style="width:42%;border-radius:14px;border:1px solid var(--line);image-rendering:pixelated">
+    </div>
+  </div>
+
+  <div class="step flip reveal">
+    <div>
+      <div class="num">02 — Curate</div>
+      <h3>A gallery to pick from</h3>
+      <p>Hundreds of finalized images sit in a gallery, filterable by colour count. I choose which pictures become levels, so taste stays a human decision. The tooling only removes the drudgery around it.</p>
+    </div>
+    <figure class="fig"><img src="../media/tool/sf-final.webp" alt="Gallery of finalized pixel-art images filterable by colour count" loading="lazy"><figcaption><b>Finalized images.</b> 425 approved pictures, tagged by colour count.</figcaption></figure>
+  </div>
+
+  <div class="step reveal">
+    <div>
+      <div class="num">03 — Generate &amp; check</div>
+      <h3>Mechanics on a budget, solver on every level</h3>
+      <p>Four generators (freeform, reference-led, layout remix and variant) lay out the grid and place mechanics from a <strong>budget</strong>, with <strong>synergy rules</strong> deciding which mechanics may appear together. Every level is then run through a solver: if it can't be cleared, it never reaches me.</p>
+    </div>
+    <figure class="fig"><img src="../media/tool/sf-editor.webp" alt="Sand Flow level editor with validate, simulate and Monte Carlo buttons" loading="lazy"><figcaption><b>Level editor.</b> Validate, simulate or Monte-Carlo a level straight from the grid.</figcaption></figure>
+  </div>
+
+  <div class="step flip reveal">
+    <div>
+      <div class="num">04 — Tune the curve</div>
+      <h3>Shaping difficulty, not guessing it</h3>
+      <p>For each level I set a target shape for how tense it should feel over time: flat, a rising ramp, a mid-level hump or a late spike. A tuner then adjusts container capacities until simulated efficient play matches that shape, and the solver's winning path is drawn right on the grid.</p>
+    </div>
+    <figure class="fig"><img src="../media/tool/sf-curve.webp" alt="Curve tuning view with target curve, achieved curve and the solver's winning path" loading="lazy"><figcaption><b>Curve tuning.</b> Target curve against achieved curve, plus the winning path.</figcaption></figure>
+  </div>
+</div></section>
+
+<section class="sec"><div class="wrap">
+  <div class="prose reveal">
+    <div class="mono">Yarn Collect · What I built</div>
+    <h2>A level studio people enjoy opening</h2>
+    <p>Yarn Collect is a spline-based ball sort: yarn balls ride a looping track into containers. For it I built a level studio for the team. It opens on a 3D island hub, where each building leads into part of the workflow.</p>
+  </div>
+  <div class="step reveal">
+    <div>
+      <div class="num">01 — Hub</div>
+      <h3>An island, not a sidebar</h3>
+      <p>A small react-three-fiber diorama shows live system status, and each building opens a workspace: Levels, Simulator or Catalog. It's a small touch, but it makes a daily tool something people like opening.</p>
+    </div>
+    <figure class="fig"><img src="../media/tool/yc-island.webp" alt="Yarn Collect level studio 3D island hub" loading="lazy"></figure>
+  </div>
+  <div class="step flip reveal">
+    <div>
+      <div class="num">02 — Levels</div>
+      <h3>Every level, scored and filterable</h3>
+      <p>The 101 levels managed in the studio render as cards showing their track, containers, difficulty score and solvability, with filters by tag, colour and status. Opening one gives you editing, rescoring, colour swaps and version history.</p>
+    </div>
+    <figure class="fig"><img src="../media/tool/yc-levels.webp" alt="Grid of Yarn Collect levels with difficulty and solvability tags" loading="lazy"></figure>
+  </div>
+  <div class="step reveal">
+    <div>
+      <div class="num">03 — Difficulty over play</div>
+      <h3>Curve tuning on top of the game's simulator</h3>
+      <p>Simulated players run each level, and the dashboard plots how full the track gets as play progresses. I set a target shape, the tuner adjusts the ball sequence and tunnel capacity to match it, then step through the replay move by move.</p>
+    </div>
+    <figure class="fig"><img src="../media/tool/yc-sim.webp" alt="Difficulty-over-play chart with target curve and tuning knobs" loading="lazy"></figure>
+  </div>
+</div></section>
+
+<section class="sec"><div class="wrap">
+  <div class="mono reveal">Result</div>
+  <h2 class="reveal">What it changed</h2>
+  <div class="stat-grid reveal">
+    <div class="stat"><b>8</b><span>Mechanics modelled exactly as the game runs them</span></div>
+    <div class="stat"><b>4</b><span>Level generators feeding one review flow</span></div>
+    <div class="stat"><b>425</b><span>Curated source images ready to become levels</span></div>
+    <div class="stat"><b>1,250+</b><span>Automated tests guarding the pipeline</span></div>
+  </div>
+  <div class="prose reveal" style="margin-top:34px">
+    <p>Levels coming out of the pipeline are solver-checked and tuned against a target difficulty curve before a designer ever reviews them. Content production moved from hand-building and hoping to <strong>choosing and verifying</strong>.</p>
+    <div class="callout"><p><b>What I'd do next:</b> feed live fail rates back into the tuner automatically, so every shipped level recalibrates the difficulty model it was generated from.</p></div>
+  </div>
+  <a class="next reveal" href="hexa-sort-liveops.html"><div><div class="mono">Next case study</div><b>Live-ops features for a top puzzle game</b></div><span class="arrow">→</span></a>
+</div></section>
+
+<footer><div class="wrap"><span>© <span id="year">2026</span> Arsalan Awan</span><a href="../index.html">← Back to home</a></div></footer>
+<script src="../js/site.js"></script>
+</body>
+</html>

@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shipping a whole game alone, with AI tools — Arsalan Awan</title>
+<meta name="description" content="Mice Flow: designed, coded and art-directed solo with Claude, Codex and Meshy, then optimised to twice the frame rate on a budget Android phone.">
+<meta property="og:title" content="Shipping a whole game alone, with AI tools — Arsalan Awan">
+<meta property="og:type" content="article">
+<meta property="og:description" content="Mice Flow: designed, coded and art-directed solo with Claude, Codex and Meshy, then optimised to twice the frame rate on a budget Android phone.">
+<meta name="twitter:card" content="summary_large_image">
+<meta property="og:image" content="https://rcpr0.github.io/og.png">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../css/site.css">
+</head>
+<body>
+<nav class="nav"><div class="wrap">
+  <a class="brand" href="../index.html">Arsalan Awan<span>.</span></a>
+  <ul>
+    <li><a href="../index.html#shipped">Shipped</a></li>
+    <li><a href="../index.html#work">Case studies</a></li>
+    <li><a href="../index.html#prototypes">Prototypes</a></li>
+    <li><a class="btn sm" href="../Arsalan-Awan-CV.pdf" download>Download CV</a></li>
+  </ul>
+</div></nav>
+
+<header class="cs-hero"><div class="wrap">
+  <a class="back" href="../index.html#work">← All case studies</a>
+  <div class="mono" style="margin-top:28px">Mice Flow · Solo build</div>
+  <h1>Shipping a whole game alone, with AI tools</h1>
+  <p class="lede">Mice Flow is a voxel puzzle where a colony of mice eats a picture block by block. I built all of it myself: design, code, levels and 3D art. I used Claude and Codex as coding partners and Meshy for 3D models, then got it running at near 60 fps on a budget phone.</p>
+  <div class="meta">
+    <div><span>Role</span><b>Solo developer</b></div>
+    <div><span>Platform</span><b>Android · Google Play</b></div>
+    <div><span>Year</span><b>2026</b></div>
+    <div><span>Tools</span><b>Unity · Claude · Codex · Meshy</b></div>
+  </div>
+  <div class="phone-row" style="margin-top:40px">
+    <div class="ph"><img src="../media/store/miceflow-1.webp" alt="Mice Flow store screenshot"></div>
+    <div class="ph"><img src="../media/hero/mice.webp" alt="Mice Flow castle level"></div>
+    <div class="ph"><img src="../media/store/miceflow-2.webp" alt="Mice Flow store screenshot"></div>
+  </div>
+</div></header>
+
+<section class="sec"><div class="wrap">
+  <div class="prose reveal">
+    <div class="mono">The challenge</div>
+    <h2>A studio's worth of roles, one person</h2>
+    <p>A shippable mobile game normally needs a designer, programmers, a 3D artist and a tech artist. I wanted to find out how far one designer could get with AI tools in every one of those seats, without lowering the bar on feel or performance.</p>
+  </div>
+</div></section>
+
+<section class="sec" style="padding-top:20px"><div class="wrap">
+  <div class="mono reveal">How I built it</div>
+
+  <div class="step reveal">
+    <div>
+      <div class="num">01 — Design</div>
+      <h3>A picture you eat, one colour at a time</h3>
+      <p>Each level is a voxel picture. Tapping a mouse house sends its mice out to eat the matching colour, so the order you tap in is the puzzle. I designed the core loop, boosters, onboarding and a 50-level opening pack, then tuned each level's composition and pacing.</p>
+    </div>
+    <div class="phone-row">
+      <div class="ph"><img src="../media/mice/level-01.webp" alt="Mice Flow level 1" loading="lazy"></div>
+      <div class="ph"><img src="../media/mice/level-03.webp" alt="Mice Flow level 3" loading="lazy"></div>
+      <div class="ph"><img src="../media/mice/level-07.webp" alt="Mice Flow level 7" loading="lazy"></div>
+    </div>
+  </div>
+
+  <div class="step flip reveal">
+    <div>
+      <div class="num">02 — AI-assisted production</div>
+      <h3>Directing tools like a team</h3>
+      <p>I treated the AI tools the way a lead treats a team: write the spec, review the output, reject what isn't right.</p>
+      <ul style="color:var(--mute);padding-left:20px">
+        <li><strong style="color:var(--ink)">Claude and Codex</strong> wrote code against my specs and reviews, with automated tests as the gate. More than 200 editor tests guard the project.</li>
+        <li><strong style="color:var(--ink)">Meshy</strong> generated the 3D models. I set the art direction and refined the results in Unity.</li>
+        <li>Every visual change was checked against captures from the device, not just the editor.</li>
+      </ul>
+    </div>
+    <figure class="fig"><img src="../media/store/miceflow-3.webp" alt="Mice Flow store screenshot" loading="lazy" style="max-width:300px;margin:0 auto"></figure>
+  </div>
+</div></section>
+
+<section class="sec"><div class="wrap">
+  <div class="prose reveal">
+    <div class="mono">Performance deep-dive</div>
+    <h2>From 30 to 59 fps on a budget phone</h2>
+    <p>The art direction worked, but the boards were far too heavy for a budget phone. I fixed it in three measured steps on a Pixel 4a, using release builds and a bot playing each level, with 30-second timed segments.</p>
+  </div>
+  <div class="stat-grid reveal" style="margin:26px 0 10px">
+    <div class="stat"><b>13×</b><span>Fewer triangles on the densest board: 3.7M down to 283K</span></div>
+    <div class="stat"><b>~60</b><span>fps with flat materials, which proved shading was the real cost</span></div>
+    <div class="stat"><b>29.7 → 59.1</b><span>fps on the densest level after shader specialisation</span></div>
+    <div class="stat"><b>≤ 2/255</b><span>Maximum colour difference in matched captures, so no visible art change</span></div>
+  </div>
+  <div class="prose reveal">
+    <ol style="color:var(--mute);padding-left:20px">
+      <li><strong style="color:var(--ink)">Geometry.</strong> Sculpted cheese tiles were 12,290 triangles each. Swapping them for baked tiles took the densest board from 3.7M to 283K triangles and from 901 to 281 draw calls. That brought it up to about 30 fps, still well short of 60.</li>
+      <li><strong style="color:var(--ink)">Diagnosis.</strong> With every material replaced by a flat colour, the same boards ran at about 60 fps. The geometry was now fine, and shading was the bottleneck.</li>
+      <li><strong style="color:var(--ink)">Shader specialisation.</strong> I removed per-pixel clipping from ordinary opaque draws, moved plain surfaces to vertex lighting, and added dedicated shader variants for cheese and houses that strip unused code. Levels 1–9 now run at 59.8–59.9 fps and the densest level at 59.1.</li>
+    </ol>
+  </div>
+  <div class="split reveal" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:460px;margin:20px auto 0">
+    <figure class="fig"><img src="../media/mice/perf-before.webp" alt="Pixel 4a capture before optimisation" loading="lazy"><figcaption><b>Before</b>, on a Pixel 4a.</figcaption></figure>
+    <figure class="fig"><img src="../media/mice/perf-after.webp" alt="Pixel 4a capture after optimisation" loading="lazy"><figcaption><b>After.</b> Same look, about twice the frame rate.</figcaption></figure>
+  </div>
+</div></section>
+
+<section class="sec"><div class="wrap">
+  <div class="mono reveal">Result</div>
+  <h2 class="reveal">Live on Google Play</h2>
+  <div class="stat-grid reveal">
+    <div class="stat"><b>1</b><span>Person, every discipline</span></div>
+    <div class="stat"><b>50</b><span>Levels in the launch pack</span></div>
+    <div class="stat"><b>2×</b><span>Frame rate on the densest level</span></div>
+    <div class="stat"><b>200+</b><span>Editor tests passing</span></div>
+  </div>
+  <div class="prose reveal" style="margin-top:30px">
+    <div class="callout"><p><b>What I'd do next:</b> one frame-time tail remains on the densest level, where about 1% of frames miss vsync. I'd profile that last spike before adding denser boards.</p></div>
+    <p><a class="btn o" href="https://play.google.com/store/apps/details?id=com.mindstorm.miceflow" target="_blank" rel="noopener">See it on Google Play ↗</a></p>
+  </div>
+  <a class="next reveal" href="difficulty-analytics.html"><div><div class="mono">Next case study</div><b>Reading difficulty from player data</b></div><span class="arrow">→</span></a>
+</div></section>
+
+<footer><div class="wrap"><span>© <span id="year">2026</span> Arsalan Awan</span><a href="../index.html">← Back to home</a></div></footer>
+<script src="../js/site.js"></script>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Why a game's first levels were losing players — Arsalan Awan</title>
+<meta name="description" content="An independent FTUE study: a solver and frame-by-frame competitor benchmarks found the move rule tripling choices on near-identical boards.">
+<meta property="og:title" content="Why a game's first levels were losing players — Arsalan Awan">
+<meta property="og:type" content="article">
+<meta property="og:description" content="An independent FTUE study: a solver and frame-by-frame competitor benchmarks found the move rule tripling choices on near-identical boards.">
+<meta name="twitter:card" content="summary_large_image">
+<meta property="og:image" content="https://rcpr0.github.io/og.png">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../css/site.css">
+<style>
+  .bars { display: grid; gap: 14px; margin: 10px 0 6px; }
+  .bar { display: grid; grid-template-columns: 170px 1fr 64px; align-items: center; gap: 14px; font-size: 14px; color: var(--mute); }
+  .bar i { display: block; height: 26px; border-radius: 8px; background: var(--line); }
+  .bar i.hi { background: var(--acc); }
+  .bar b { font: 800 24px/1 var(--display); color: var(--ink); text-align: right; }
+  @media (max-width: 760px) { .bar { grid-template-columns: 110px 1fr 52px; font-size: 12px; } }
+</style>
+</head>
+<body>
+<nav class="nav"><div class="wrap">
+  <a class="brand" href="../index.html">Arsalan Awan<span>.</span></a>
+  <ul>
+    <li><a href="../index.html#shipped">Shipped</a></li>
+    <li><a href="../index.html#work">Case studies</a></li>
+    <li><a href="../index.html#prototypes">Prototypes</a></li>
+    <li><a class="btn sm" href="../Arsalan-Awan-CV.pdf" download>Download CV</a></li>
+  </ul>
+</div></nav>
+
+<header class="cs-hero"><div class="wrap">
+  <a class="back" href="../index.html#work">← All case studies</a>
+  <div class="mono" style="margin-top:28px">Independent study · FTUE · Link Sort</div>
+  <h1>Why a game's first levels were losing players</h1>
+  <p class="lede">A mobile studio asked why its sort puzzle was losing players in the first fifteen levels. I answered with a solver, frame-by-frame benchmarks against two genre leaders, and the studio's own funnel data. Then I re-paced the levels that needed it.</p>
+  <div class="meta">
+    <div><span>Role</span><b>Independent consultant</b></div>
+    <div><span>Scope</span><b>Levels 1–15, FTUE</b></div>
+    <div><span>Year</span><b>2026</b></div>
+    <div><span>Methods</span><b>Solver · benchmarks · funnel</b></div>
+  </div>
+  <p style="margin-top:26px"><a class="btn" href="https://drive.google.com/file/d/1_1TzYHRQWPR6QpBPdaCUb4UfTJjZ8NAS/view" target="_blank" rel="noopener">Read the full report (PDF) ↗</a></p>
+</div></header>
+
+<section class="sec"><div class="wrap">
+  <div class="prose reveal">
+    <div class="mono">Finding 1 · The rule, not the levels</div>
+    <h2>Three times the choices on the same boards</h2>
+    <p>The obvious guess was that the early levels were simply too hard. Measuring them said otherwise. I wrote a solver and counted the legal opening moves on every early board, both under the game's own move rule and under the rule its competitors use.</p>
+  </div>
+  <div class="reveal" style="max-width:760px">
+    <div class="bars">
+      <div class="bar"><span>This game, own rule</span><i class="hi" style="width:100%"></i><b>30.5</b></div>
+      <div class="bar"><span>This game, common rule</span><i style="width:33%"></i><b>10.2</b></div>
+      <div class="bar"><span>Genre leader A</span><i style="width:34%"></i><b>10.4</b></div>
+      <div class="bar"><span>Genre leader B</span><i style="width:31.5%"></i><b>9.6</b></div>
+    </div>
+    <p style="font-size:13px;color:var(--dim)">Mean legal opening moves per level.</p>
+  </div>
+  <div class="prose reveal">
+    <p>Under a shared rule, this game's boards were actually the <strong>tamest</strong> of the three. Under its own, more permissive move rule they offered about three times as many choices. New players weren't facing harder puzzles. They were facing far more options with no signal about which ones mattered.</p>
+  </div>
+</div></section>
+
+<section class="sec"><div class="wrap">
+  <div class="mono reveal">Finding 2 · What actually predicts failure</div>
+  <h2 class="reveal">Scattered colours, new colours, and a broken metric</h2>
+  <div class="stat-grid reveal">
+    <div class="stat"><b>~½</b><span>Of the variation in fail rate from level 5 onward is explained by colour scatter</span></div>
+    <div class="stat"><b>2×</b><span>Churn on levels that introduce a new colour: 15.0% vs 7.5%</span></div>
+    <div class="stat"><b>L1–4</b><span>Provably unlosable, yet reporting fail rates, so the funnel was mismeasured</span></div>
+  </div>
+  <div class="prose reveal" style="margin-top:26px">
+    <p>The solver proved levels 1–4 couldn't be lost, so the "failures" reported on them were tracking something else. That one finding means the early funnel needs re-instrumenting before its numbers can be trusted.</p>
+  </div>
+</div></section>
+
+<section class="sec"><div class="wrap">
+  <div class="prose reveal">
+    <div class="mono">What I changed</div>
+    <h2>Re-pacing, measured</h2>
+    <ul>
+      <li><strong>Solver-led re-pacing</strong> on five levels (4, 7, 8, 12 and 13), cutting colour scatter where it spiked. The producer's own hand-authored pass covered the rest.</li>
+      <li><strong>Mechanic onboarding fixed:</strong> a covering mechanic introduced once and then dropped now recurs across levels 10–15, and a debut that opened too late in the level was moved to the halfway point.</li>
+      <li>Found two levels that are only solvable under this game's rule. One is a deliberate gate. The other is a tutorial that can't exist in either competitor, which is worth knowing before copying a competitor's pacing.</li>
+    </ul>
+    <div class="callout"><p><b>Honesty built in:</b> the report includes a corrections log. One correlation first circulated without its caveats is restated there with its sample size, and every change that was later reverted is recorded. A study that reports only its wins misrepresents itself.</p></div>
+  </div>
+  <a class="next reveal" href="level-tooling.html"><div><div class="mono">Next case study</div><b>Level dashboards for two live games</b></div><span class="arrow">→</span></a>
+</div></section>
+
+<footer><div class="wrap"><span>© <span id="year">2026</span> Arsalan Awan</span><a href="../index.html">← Back to home</a></div></footer>
+<script src="../js/site.js"></script>
+</body>
+</html>

@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Live-ops features for a top puzzle game — Arsalan Awan</title>
+<meta name="description" content="Hexa Sort live-ops: Collections V2, Roll &amp; Win, Chain Offer, Rainbow Launcher. Designing flows and directing UI and art, then the A/B tests and Looker analysis that tuned them.">
+<meta property="og:title" content="Live-ops features for a top puzzle game — Arsalan Awan">
+<meta property="og:type" content="article">
+<meta property="og:description" content="Hexa Sort live-ops: Collections V2, Roll &amp; Win, Chain Offer, Rainbow Launcher. Designing flows and directing UI and art, then the A/B tests and Looker analysis that tuned them.">
+<meta name="twitter:card" content="summary_large_image">
+<meta property="og:image" content="https://rcpr0.github.io/og.png">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../css/site.css">
+<style>
+  .feature { padding: 64px 0; border-top: 1px solid var(--line); }
+  .feature-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 8px; }
+  .clip { cursor: pointer; }
+  .clip .ph video { position: absolute; inset: 0; opacity: 0; transition: opacity .25s; }
+  .clip.playing .ph video { opacity: 1; }
+  .clip .ph { position: relative; width: 100%; }
+  .board { margin-top: 26px; }
+  .clip.playing .play-hint { opacity: 0; }
+  .scroll-x { overflow-x: auto; border-radius: 14px; }
+  @media (max-width: 760px) { .scroll-x img { min-width: 860px; } }
+</style>
+</head>
+<body>
+<nav class="nav"><div class="wrap">
+  <a class="brand" href="../index.html">Arsalan Awan<span>.</span></a>
+  <ul>
+    <li><a href="../index.html#shipped">Shipped</a></li>
+    <li><a href="../index.html#work">Case studies</a></li>
+    <li><a href="../index.html#prototypes">Prototypes</a></li>
+    <li><a class="btn sm" href="../Arsalan-Awan-CV.pdf" download>Download CV</a></li>
+  </ul>
+</div></nav>
+
+<header class="cs-hero"><div class="wrap">
+  <a class="back" href="../index.html#work">← All case studies</a>
+  <div class="mono" style="margin-top:28px">Hexa Sort · Live-ops · 2024–25</div>
+  <h1>Live-ops features for a top puzzle game</h1>
+  <p class="lede">My first year at Mindstorm was on Hexa Sort, a live puzzle game published by Lion Studios. I worked on its events and meta features end to end: research and flows, directing the UI and art, then the A/B tests and Looker analysis that decided what stayed and how it was tuned. (Hexa Sort isn't Hex Up!, a separate game I designed later.)</p>
+  <div class="meta">
+    <div><span>Role</span><b>Game designer, live-ops</b></div>
+    <div><span>Game</span><b>Hexa Sort</b></div>
+    <div><span>Years</span><b>2024 – 2025</b></div>
+    <div><span>Tools</span><b>Figma · Looker · Sheets · A/B tests</b></div>
+  </div>
+  <div class="phone-row" style="margin-top:40px">
+    <div class="ph"><img src="../media/hexa/card-1.webp" alt="Roll &amp; Win event screen"></div>
+    <div class="ph"><img src="../media/hexa/card-3.webp" alt="Collections card set with a mystery card"></div>
+    <div class="ph"><img src="../media/hexa/card-2.webp" alt="Rainbow Launcher event screen"></div>
+  </div>
+</div></header>
+
+<section class="sec"><div class="wrap">
+  <div class="prose reveal">
+    <div class="mono">How I worked</div>
+    <h2>Ship it, measure it, tune it</h2>
+    <p>Every feature followed the same loop. I researched how the best games in the genre handle it, wrote the spec and flows in Figma, and directed the UI and art with the art team. After launch I designed an A/B test, defined the Looker dashboards with the data team, and rebalanced based on what the numbers showed.</p>
+  </div>
+</div></section>
+
+<!-- Collections V2 -->
+<section class="feature" id="collections"><div class="wrap">
+  <div class="feature-head reveal"><span class="feature-tag">Lead feature</span><span class="mono">Collections V2 · Roll &amp; Win · Mystery Card</span></div>
+  <h2 class="reveal">Collections, rebuilt around progress</h2>
+  <div class="prose reveal">
+    <p>Collections, where players complete card sets for rewards, had launched before I joined the feature. Its first version wasn't moving engagement or revenue, and the top complaint in a player survey was simple: <strong>progress felt too slow</strong>. I led the second version.</p>
+    <ul>
+      <li><strong>Diagnosis:</strong> reviewed V1's data alongside the survey results, then ranked candidate fixes on a cost-versus-impact matrix.</li>
+      <li><strong>Economy:</strong> designed card-pack pricing, rarity odds and daily-deal price ramps, with simulators that projected how quickly players would complete sets before anything shipped.</li>
+      <li><strong>Roll &amp; Win:</strong> a dice event I took from ideation boards to final rules, coin-sink maths, spec and copy.</li>
+      <li><strong>Mystery Card:</strong> a collection card earned outside Collections, through live events and card packs, tying the feature into the rest of the live-ops calendar.</li>
+    </ul>
+  </div>
+  <div class="step reveal">
+    <figure class="fig"><img src="../media/hexa/fig-rollnwin-storyboard.webp" alt="Roll &amp; Win mechanic storyboard: dice, lockers and keys" loading="lazy"><figcaption><b>Mechanic storyboard.</b> Dice rolls, lockers and keys, step by step.</figcaption></figure>
+    <figure class="fig"><img src="../media/hexa/rollnwin-flow.webp" alt="Roll &amp; Win final flow with dice rules" loading="lazy"><figcaption><b>Final flow.</b> Dice rules and reward outcomes, frame by frame.</figcaption></figure>
+  </div>
+  <div class="step flip reveal">
+    <div>
+      <div class="num">Mystery Card</div>
+      <h3>One card, two systems</h3>
+      <p>The Mystery Card sits in a collection set but is earned outside it, through live events and card packs, so finishing a set pulls players into the event calendar and the event calendar feeds Collections. I designed the flow; the final screens were produced with the art team.</p>
+    </div>
+    <figure class="fig"><img src="../media/hexa/mystery-flow.webp" alt="Mystery Card flow mock" loading="lazy"></figure>
+  </div>
+  <div class="stat-grid reveal">
+    <div class="stat"><b>18% → 33%</b><span>Average set progress after 12 days, V1 vs V2 day-one joiners</span></div>
+    <div class="stat"><b>+95%</b><span>Engagement for the winning Roll &amp; Win free-player variant</span></div>
+    <div class="stat"><b>+60%</b><span>Completion for the winning Roll &amp; Win paying-player variant</span></div>
+    <div class="stat"><b>1.5 → 1.9</b><span>Daily-deal transactions per engaged player after my changes</span></div>
+  </div>
+  <figure class="fig board reveal"><div class="scroll-x"><img src="../media/hexa/fig-rollnwin-ab.webp" alt="Roll &amp; Win A/B test design: variants across ad type, rolls, roll cost and card-pack reroll" loading="lazy"></div><figcaption><b>A/B design.</b> Roll &amp; Win variants across ad format, free rolls, roll cost and rerolls. I recommended the best-monetising variants and flagged where they risked feeling pay-to-win.</figcaption></figure>
+  <div class="prose reveal" style="margin-top:24px">
+    <div class="callout"><p><b>What didn't go to plan:</b> after rewards were cut late in the cycle, set completion came in at about half my pre-launch projection. That taught me to rerun projections every time the economy changes, not just at spec time.</p></div>
+  </div>
+</div></section>
+
+<!-- Chain Offer -->
+<section class="feature" id="chain-offer"><div class="wrap">
+  <div class="feature-head reveal"><span class="mono">Chain Offer · Economy redesign</span></div>
+  <h2 class="reveal">Redesigning an offer ladder players already knew</h2>
+  <div class="step reveal">
+    <div>
+      <p>Chain Offer is a ladder of bundles where claiming one unlocks the next. The feature already existed. My job was to make it earn more without making it feel pushier.</p>
+      <ul style="color:var(--mute);padding-left:20px">
+        <li>Rebalanced the ladder against <strong style="color:var(--ink)">spender personas</strong> across four design rounds, ending on a top-heavy structure modelled on genre leaders.</li>
+        <li>Wrote the A/B spec, with five variants in the final round.</li>
+        <li>Learned from the test: <strong style="color:var(--ink)">opening the ladder with a paid step</strong> cut purchase rate and free-to-paid conversion, which shaped how each player segment's ladder starts.</li>
+      </ul>
+    </div>
+    <div class="phone-row"><div class="ph" style="width:min(48%,230px);transform:rotate(3deg)"><img src="../media/hexa/chain-offer.webp" alt="Chain Offer reward ladder in game" loading="lazy"></div></div>
+  </div>
+  <div class="stat-grid reveal">
+    <div class="stat"><b>+6%</b><span>IAP revenue on full rollout</span></div>
+    <div class="stat"><b>+7%</b><span>Revenue per paying user</span></div>
+    <div class="stat"><b>+14%</b><span>IAP revenue for the winning variant in the first test</span></div>
+  </div>
+</div></section>
+
+<!-- Rainbow Launcher -->
+<section class="feature" id="rainbow"><div class="wrap">
+  <div class="feature-head reveal"><span class="mono">Rainbow Launcher · Rainbow Streak</span></div>
+  <h2 class="reveal">When "easier" costs money</h2>
+  <div class="step reveal">
+    <div>
+      <p>The Rainbow Launcher is a booster that clears tiles on the board. I reran its placement A/B test to validate the first result. The best placement cut level <strong>fail rate by about a fifth</strong>, but it also cut <strong>coin spend by up to a third</strong>, because players were spending less to get through levels.</p>
+      <p>Alongside it I owned the spec for <strong>Rainbow Streak</strong>, an event that earns the launcher through win streaks. I added two new test variants, retuned the shots per streak tier and the difficulty offsets, and worked through the activation flow with the art team.</p>
+    </div>
+    <div class="phone-row">
+      <figure class="clip" data-video style="margin:0;width:min(46%,210px)"><div class="ph"><img src="../media/hexa/rainbow-menu.webp" alt="Rainbow Streak on the main menu" loading="lazy"><video src="../media/hexa/rainbow-menu.mp4" poster="../media/hexa/rainbow-menu.webp" muted loop playsinline preload="none"></video><span class="play-hint">▶ PLAY</span></div></figure>
+      <div class="ph" style="width:min(46%,210px)"><img src="../media/hexa/card-2.webp" alt="Rainbow Launcher streak event screen" loading="lazy"></div>
+    </div>
+  </div>
+  <figure class="fig board reveal" style="max-width:780px;margin-left:auto;margin-right:auto"><img src="../media/hexa/fig-rainbow-ab.webp" alt="Rainbow Launcher A/B test design table: unlock level, streak dependency, checkpoints, shots and dynamic difficulty per variant" loading="lazy"><figcaption><b>A/B design.</b> Seven variants testing streak vs non-streak unlocks, checkpoint spacing, shots per tier and dynamic difficulty. Variants E and F are the ones I added.</figcaption></figure>
+</div></section>
+
+<!-- Weekly Quest + Donut Craze -->
+<section class="feature" id="more"><div class="wrap">
+  <div class="feature-head reveal"><span class="mono">Optimisation work</span></div>
+  <h2 class="reveal">Making existing features pull their weight</h2>
+  <div class="step reveal">
+    <div>
+      <div class="num">Weekly Quest</div>
+      <h3>Finding the missions nobody finished</h3>
+      <p>I specced the feature's Looker dashboard, then broke completion down by mission set. The best sets were completed many times more often than the worst, which pointed straight at the weak missions to replace. I also proposed a task-complete floater so players could see their progress mid-level.</p>
+    </div>
+    <div class="phone-row"><div class="ph" style="width:min(48%,220px)"><img src="../media/hexa/weekly-floater.webp" alt="Weekly Quest task-complete floater in a level" loading="lazy"></div></div>
+  </div>
+  <div class="step flip reveal">
+    <div>
+      <div class="num">Donut Craze</div>
+      <h3>Review, art direction, polish</h3>
+      <p>For this event I wrote the feature review against the genre's best version of the format, directed its art and VFX (flat sprites, shine, spin and confetti), sourced the sound and music, and ran build QA. I later did a quality-of-life pass and a rebalance of its card-pack rewards.</p>
+    </div>
+    <div class="phone-row">
+      <figure class="clip" data-video style="margin:0;width:min(46%,210px)"><div class="ph"><img src="../media/hexa/donut.webp" alt="Donut Craze event gameplay" loading="lazy"><video src="../media/hexa/donut.mp4" poster="../media/hexa/donut.webp" muted loop playsinline preload="none"></video><span class="play-hint">▶ PLAY</span></div></figure>
+      <figure class="clip" data-video style="margin:0;width:min(46%,210px)"><div class="ph"><img src="../media/hexa/cardpack.webp" alt="Card pack reward sequence" loading="lazy"><video src="../media/hexa/cardpack.mp4" poster="../media/hexa/cardpack.webp" muted loop playsinline preload="none"></video><span class="play-hint">▶ PLAY</span></div></figure>
+    </div>
+  </div>
+</div></section>
+
+<section class="sec"><div class="wrap">
+  <div class="prose reveal">
+    <div class="mono">What I took from it</div>
+    <h2>Every feature is a hypothesis</h2>
+    <p>A year of live-ops taught me to design features as experiments: write down what should move before shipping, instrument it, and accept the result even when it's a trade-off, like a booster that helps players but costs coins. It's the same habit I now bring to level design.</p>
+  </div>
+  <a class="next reveal" href="doku-puzzles.html"><div><div class="mono">Next case study</div><b>Deduction puzzles you solve by looking</b></div><span class="arrow">→</span></a>
+</div></section>
+
+<footer><div class="wrap"><span>© <span id="year">2026</span> Arsalan Awan</span><a href="../index.html">← Back to home</a></div></footer>
+<script src="../js/site.js"></script>
+</body>
+</html>

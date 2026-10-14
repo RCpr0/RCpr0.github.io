@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deduction puzzles you solve by looking — Arsalan Awan</title>
+<meta name="description" content="Designing KittyDoku and CarDoku: an HTML level workbench with its own solver, one answer per level, and no guessing.">
+<meta property="og:title" content="Deduction puzzles you solve by looking — Arsalan Awan">
+<meta property="og:type" content="article">
+<meta property="og:description" content="Designing KittyDoku and CarDoku: an HTML level workbench with its own solver, one answer per level, and no guessing.">
+<meta name="twitter:card" content="summary_large_image">
+<meta property="og:image" content="https://rcpr0.github.io/og.png">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../css/site.css">
+</head>
+<body>
+<nav class="nav"><div class="wrap">
+  <a class="brand" href="../index.html">Arsalan Awan<span>.</span></a>
+  <ul>
+    <li><a href="../index.html#shipped">Shipped</a></li>
+    <li><a href="../index.html#work">Case studies</a></li>
+    <li><a href="../index.html#prototypes">Prototypes</a></li>
+    <li><a class="btn sm" href="../Arsalan-Awan-CV.pdf" download>Download CV</a></li>
+  </ul>
+</div></nav>
+
+<header class="cs-hero"><div class="wrap">
+  <a class="back" href="../index.html#work">← All case studies</a>
+  <div class="mono" style="margin-top:28px">KittyDoku + CarDoku · Puzzle design</div>
+  <h1>Deduction puzzles you solve by looking</h1>
+  <p class="lede">KittyDoku and CarDoku are logic puzzles in the family of Star Battle and Queens. I designed their rules and levels in a purpose-built HTML workbench with its own solver, so every level has exactly one answer and can be reached without guessing.</p>
+  <div class="meta">
+    <div><span>Role</span><b>Primary designer</b></div>
+    <div><span>Games</span><b>KittyDoku, CarDoku</b></div>
+    <div><span>Year</span><b>2026</b></div>
+    <div><span>Tools</span><b>JavaScript workbench · Unity</b></div>
+  </div>
+  <div class="phone-row" style="margin-top:40px">
+    <div class="ph"><img src="../media/store/kittydoku-1.webp" alt="KittyDoku gameplay screenshot"></div>
+    <div class="ph"><img src="../media/store/cardoku-1.webp" alt="CarDoku gameplay screenshot"></div>
+    <div class="ph"><img src="../media/store/kittydoku-2.webp" alt="KittyDoku level screenshot"></div>
+  </div>
+</div></header>
+
+<section class="sec"><div class="wrap">
+  <div class="prose reveal">
+    <div class="mono">The problem</div>
+    <h2>Logic puzzles live or die on fairness</h2>
+    <p>Players forgive hard puzzles. What they don't forgive is a puzzle that makes them guess, or a level with two valid answers where the game says one of them is wrong. A generator alone doesn't solve this: it can produce boards that are technically solvable but only through trial and error.</p>
+    <p>I wanted every level to be <strong>findable by looking</strong>. Each placement should be the last legal square left in its colour, never a move that only follows from imagining how a wrong guess would play out.</p>
+  </div>
+</div></section>
+
+<section class="sec" style="padding-top:20px"><div class="wrap">
+  <div class="mono reveal">What I built</div>
+
+  <div class="step reveal">
+    <div>
+      <div class="num">01 — The rule set</div>
+      <h3>A car is two squares long</h3>
+      <p>Place one car in every coloured region. A car stands on the square you tap and fills the square it faces, and its gaze must never reach another car. That one change, giving each piece a facing, turns placement into aiming: two facings on the same square are two different boards.</p>
+      <p>Later levels add mice (a car that looks at one is lost), water (out of play, but gazes cross it), and walls that block a gaze.</p>
+    </div>
+    <figure class="fig"><img src="../media/doku/md-early.webp" alt="An early workbench level with coloured regions and a mouse" loading="lazy" style="max-width:340px;margin:0 auto"><figcaption><b>Early level.</b> Few regions, one hazard, one idea to learn.</figcaption></figure>
+  </div>
+
+  <div class="step flip reveal">
+    <div>
+      <div class="num">02 — The workbench</div>
+      <h3>Solver, generator and lives in one page</h3>
+      <p>The workbench is a dependency-free HTML game backed by a solver and a level generator. It enforces the design rules automatically:</p>
+      <ul style="color:var(--mute);padding-left:20px">
+        <li><strong style="color:var(--ink)">Exactly one answer</strong>, counting facing as part of the answer.</li>
+        <li><strong style="color:var(--ink)">No guessing.</strong> From level 7, where a car first chooses between two directions, every wrong direction is one the board visibly forbids.</li>
+        <li><strong style="color:var(--ink)">Fair punishment.</strong> A wrong car costs one of three lives, but a move the game wouldn't allow is refused, not charged.</li>
+        <li><strong style="color:var(--ink)">Mistakes explained</strong> in a speech bubble on the square, naming the colour a wrong car really blocks.</li>
+      </ul>
+    </div>
+    <figure class="fig"><img src="../media/doku/md-late.webp" alt="A late workbench level with placed cars, mice, water and ruled-out squares" loading="lazy" style="max-width:340px;margin:0 auto"><figcaption><b>Late level.</b> Placed cars lock in on confirmation; × marks squares ruled out by a gaze.</figcaption></figure>
+  </div>
+
+  <div class="step reveal">
+    <div>
+      <div class="num">03 — Boards that fit a phone</div>
+      <h3>Size set by packing, not taste</h3>
+      <p>A car takes two squares, so the number that fit on a board has a hard ceiling. I measured it for every board shape and facing pool. Five columns is the minimum for an east-facing car with a neighbour, so the game opens on 5×5 rather than 4×4 (which only fits two cars), and boards top out at 5×7 so they fit a phone held upright.</p>
+    </div>
+    <figure class="fig"><img src="../media/doku/md-mid.webp" alt="A mid-progression workbench level" loading="lazy" style="max-width:340px;margin:0 auto"><figcaption><b>Mid progression.</b> More regions, a second hazard, one forced deduction.</figcaption></figure>
+  </div>
+
+  <div class="step flip reveal">
+    <div>
+      <div class="num">04 — Benchmarking</div>
+      <h3>Measured against the published genre leader</h3>
+      <p>I transcribed 100 levels of a published game in the genre from a gameplay recording, ran them through an independent solver written to that game's stated rules, and put both catalogues through the same difficulty measurement. The result: despite the shared theme, they are different puzzles. Theirs has no facings and no hazards. That told us which of our difficulty levers had no equivalent in theirs, and where we had to set our own bar.</p>
+    </div>
+    <div class="phone-row">
+      <div class="ph"><img src="../media/store/cardoku-2.webp" alt="CarDoku screenshot" loading="lazy"></div>
+      <div class="ph"><img src="../media/store/kittydoku-3.webp" alt="KittyDoku screenshot" loading="lazy"></div>
+    </div>
+  </div>
+</div></section>
+
+<section class="sec"><div class="wrap">
+  <div class="mono reveal">Result</div>
+  <h2 class="reveal">Two shipped games from one rule engine</h2>
+  <div class="stat-grid reveal">
+    <div class="stat"><b>45</b><span>Levels in the workbench design set, each with exactly one answer</span></div>
+    <div class="stat"><b>446</b><span>Automated tests on rules, solver and levels</span></div>
+    <div class="stat"><b>2</b><span>Games shipped on Google Play from the design</span></div>
+    <div class="stat"><b>0</b><span>Levels that need a guess to solve</span></div>
+  </div>
+  <div class="prose reveal" style="margin-top:34px">
+    <div class="callout"><p><b>What I'd do next:</b> log the time each deduction takes in live play, and use it as a difficulty measure in place of board size and hazard count.</p></div>
+  </div>
+  <a class="next reveal" href="mice-flow.html"><div><div class="mono">Next case study</div><b>Shipping a whole game alone, with AI tools</b></div><span class="arrow">→</span></a>
+</div></section>
+
+<footer><div class="wrap"><span>© <span id="year">2026</span> Arsalan Awan</span><a href="../index.html">← Back to home</a></div></footer>
+<script src="../js/site.js"></script>
+</body>
+</html>

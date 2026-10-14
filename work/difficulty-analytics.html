@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reading difficulty from player data — Arsalan Awan</title>
+<meta name="description" content="Bot-calibrated difficulty bands, funnel spike detection with confidence intervals, and the finding that fail rate, not level position, predicts churn.">
+<meta property="og:title" content="Reading difficulty from player data — Arsalan Awan">
+<meta property="og:type" content="article">
+<meta property="og:description" content="Bot-calibrated difficulty bands, funnel spike detection with confidence intervals, and the finding that fail rate, not level position, predicts churn.">
+<meta name="twitter:card" content="summary_large_image">
+<meta property="og:image" content="https://rcpr0.github.io/og.png">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../css/site.css">
+</head>
+<body>
+<nav class="nav"><div class="wrap">
+  <a class="brand" href="../index.html">Arsalan Awan<span>.</span></a>
+  <ul>
+    <li><a href="../index.html#shipped">Shipped</a></li>
+    <li><a href="../index.html#work">Case studies</a></li>
+    <li><a href="../index.html#prototypes">Prototypes</a></li>
+    <li><a class="btn sm" href="../Arsalan-Awan-CV.pdf" download>Download CV</a></li>
+  </ul>
+</div></nav>
+
+<header class="cs-hero"><div class="wrap">
+  <a class="back" href="../index.html#work">← All case studies</a>
+  <div class="mono" style="margin-top:28px">Sand Flow · Difficulty · Analytics</div>
+  <h1>Reading difficulty from player data</h1>
+  <p class="lede">"Is this level too hard?" usually gets answered by gut feel. I built the measurement around it: bots that estimate difficulty before launch, a funnel tool that separates real spikes from noise after launch, and an analysis of what actually makes players leave.</p>
+  <div class="meta">
+    <div><span>Role</span><b>Designer &amp; analyst</b></div>
+    <div><span>Game</span><b>Sand Flow</b></div>
+    <div><span>Year</span><b>2025 – 2026</b></div>
+    <div><span>Methods</span><b>Bots · Wilson CIs · A/B tests</b></div>
+  </div>
+  <p style="font-size:13px;color:var(--dim);margin-top:18px">Charts on this page are illustrative: they show the shape of the real analyses, with values anonymised.</p>
+</div></header>
+
+<section class="sec"><div class="wrap">
+  <div class="step reveal">
+    <div>
+      <div class="num">01 — Before launch</div>
+      <h3>Difficulty bands from bots</h3>
+      <p>Playtest bots ran every level many times. Their fail rate, combined with each level's colour count, gives a difficulty score that I checked against levels held out of the fit. Cut points then split levels into <strong>normal</strong>, <strong>hard</strong> and <strong>super-hard</strong> bands, so the progression can be sequenced deliberately instead of by feel.</p>
+      <p>One surprise: once colour count is accounted for, adding more mechanics barely moves the fail rate. Mechanics add variety more than difficulty, which matters when budgeting them.</p>
+    </div>
+    <figure class="fig"><img src="../media/analytics/bands.svg" alt="Illustrative histogram of bot fail rate per level split into normal, hard and super-hard bands" loading="lazy"></figure>
+  </div>
+
+  <div class="step flip reveal">
+    <div>
+      <div class="num">02 — After launch</div>
+      <h3>Spikes, not noise</h3>
+      <p>Raw completion rates are noisy, especially deep in the funnel where few players remain. My funnel tool puts a <strong>Wilson confidence interval</strong> on each level's rate and compares it against its own difficulty band, so it only flags a level as a spike when it falls clearly outside what its band predicts.</p>
+      <p>I used it on 161 levels from a live iOS user-acquisition campaign to flag where retuning would matter most.</p>
+    </div>
+    <figure class="fig"><img src="../media/analytics/funnel.svg" alt="Illustrative funnel chart with confidence-interval whiskers and one flagged spike" loading="lazy"></figure>
+  </div>
+
+  <div class="step reveal">
+    <div>
+      <div class="num">03 — Why players leave</div>
+      <h3>Fail rate predicts churn. Position doesn't.</h3>
+      <p>A common assumption is that players drop off simply because they're deep into the game. On 105 live levels beyond the opening, churn followed <strong>how often players failed</strong> a level, while the level's position barely mattered. Levels that were both hard and long churned noticeably more.</p>
+      <p>That shifted the design question from "how many levels before players leave" to "which levels make them fail too often".</p>
+    </div>
+    <figure class="fig"><img src="../media/analytics/churn.svg" alt="Illustrative scatter plots: churn rises with fail rate but stays flat with level position" loading="lazy"></figure>
+  </div>
+</div></section>
+
+<section class="sec"><div class="wrap">
+  <div class="prose reveal">
+    <div class="mono">Closing the loop</div>
+    <h2>Testing the order, not just the levels</h2>
+    <p>Because difficulty now had a number, level <em>order</em> became something we could test. I designed A/B tests that reorder levels against churn and monetisation KPIs, so pacing decisions are settled by results, not opinion.</p>
+    <div class="callout"><p><b>Caveats I state up front:</b> these are correlations from observational data. One churn event used in the analysis was later retired, so the finding is directional rather than final. Early levels behave differently, because players drop off at the very start for reasons unrelated to difficulty, and they're treated separately.</p></div>
+  </div>
+  <div class="stat-grid reveal" style="margin-top:20px">
+    <div class="stat"><b>3</b><span>Difficulty bands, calibrated by bots</span></div>
+    <div class="stat"><b>161</b><span>Live levels screened for spikes</span></div>
+    <div class="stat"><b>105</b><span>Levels in the churn analysis</span></div>
+    <div class="stat"><b>0</b><span>Raw rates trusted without a confidence interval</span></div>
+  </div>
+  <a class="next reveal" href="link-sort-study.html"><div><div class="mono">Next case study</div><b>Why a game's first levels were losing players</b></div><span class="arrow">→</span></a>
+</div></section>
+
+<footer><div class="wrap"><span>© <span id="year">2026</span> Arsalan Awan</span><a href="../index.html">← Back to home</a></div></footer>
+<script src="../js/site.js"></script>
+</body>
+</html>
