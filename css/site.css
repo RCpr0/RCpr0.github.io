@@ -283,7 +283,7 @@ footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wr
 .arcade-prompt[hidden] { display: none; }
 @keyframes bob2 { 50% { transform: translate(-50%, -4px); } }
 .arcade-card { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 24px; text-align: center;
-  background: rgba(20,14,40,.82); backdrop-filter: blur(3px); animation: pop-in .35s cubic-bezier(.3,1.5,.5,1) both; }
+  background: rgba(20,14,40,.82); backdrop-filter: blur(3px); animation: pop-in .35s cubic-bezier(.3,1.5,.5,1) both; z-index: 5; }
 .arcade-card[hidden] { display: none; }
 .arcade-card b { font: 400 34px/1 'Russo One', var(--display); color: #fff; text-shadow: 0 4px 0 #3c2f95; text-transform: uppercase; }
 .arcade-card.lose b { text-shadow: 0 4px 0 #8c2b3c; }

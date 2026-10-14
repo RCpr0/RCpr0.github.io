@@ -39,7 +39,7 @@ function init() {
       card.className = 'arcade-card ' + (win ? 'win' : 'lose');
       card.innerHTML = `<b>${title}</b><p>${sub || ''}</p>`;
       if (next) card.append(button(win ? (last ? 'Play again' : 'Next level →') : 'Retry', next, 'btn'));
-      if (retry && win) card.append(button('Replay', retry, 'btn o'));
+      if (retry && win && !last) card.append(button('Replay', retry, 'btn o'));
       card.hidden = false; sound(win ? 'clear' : 'lose');
       card.querySelector('button')?.focus({ preventScroll: true });
     },
