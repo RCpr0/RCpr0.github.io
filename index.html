@@ -42,18 +42,37 @@
       <a class="btn o" href="Arsalan-Awan-CV.pdf" download>Download CV</a>
     </div>
   </div>
-  <div class="phones" aria-label="Gameplay from three games">
-    <div class="ph t1"><img src="media/hero/mice.webp" alt="Mice Flow gameplay: a voxel castle being cleared by mice"></div>
-    <div class="ph t2" data-video aria-label="Play or pause: Rainbow Launcher event in Hexa Sort"><img src="media/video/rainbow-spawn.webp" alt="Rainbow Launcher event firing in a Hexa Sort level"><video src="media/video/rainbow-spawn.mp4" poster="media/video/rainbow-spawn.webp" muted loop playsinline preload="none"></video></div>
-    <div class="ph t3"><img src="media/hero/cardoku.webp" alt="CarDoku logic puzzle board"></div>
+  <div class="stage">
+    <div class="ph t1 back" aria-hidden="true"><img src="media/hero/mice.webp" alt=""></div>
+    <div class="ph t3 back" data-video aria-label="Play or pause: Rainbow Launcher event in Hexa Sort"><img src="media/video/rainbow-spawn.webp" alt="Rainbow Launcher event firing in a Hexa Sort level"><video src="media/video/rainbow-spawn.mp4" poster="media/video/rainbow-spawn.webp" muted loop playsinline preload="none"></video></div>
+    <section class="play" id="play" aria-label="Playable sort puzzle: three short levels">
+      <div class="play-top"><span class="mono">// Play a level</span><button class="snd" type="button" data-sound-toggle aria-pressed="false"><span>Sound off</span></button></div>
+      <div class="play-hud"><b class="play-lvl">Level 1 · Teach</b><span class="play-moves">Moves 0 · Par 2</span></div>
+      <p class="play-tip">Tap a tube, then tap where its top ball should go.</p>
+      <div class="tubes" role="group" aria-label="Puzzle board"></div>
+      <div class="play-solver mono" aria-live="polite">Solver: solvable</div>
+      <div class="play-ctl">
+        <button type="button" class="undo">Undo</button><button type="button" class="restart">Restart</button><button type="button" class="hint-btn">Hint</button>
+      </div>
+      <div class="play-clear" hidden>
+        <div class="stars" aria-hidden="true"><i class="star"></i><i class="star"></i><i class="star"></i></div>
+        <b class="clear-title">Level clear</b>
+        <p class="clear-sub"></p>
+        <button type="button" class="btn play-next">Next level →</button>
+        <a class="btn play-see" href="#shipped">See the shipped games →</a>
+        <button type="button" class="btn o play-again">Play again</button>
+      </div>
+      <noscript><p class="play-tip">This puzzle needs JavaScript.</p></noscript>
+    </section>
   </div>
 </div></header>
 
 <section class="reel-sec"><div class="wrap">
   <figure class="reel reveal" data-video aria-label="Play or pause the showreel">
-    <video src="media/video/reel.mp4" poster="media/video/reel.webp" muted loop playsinline preload="none" aria-label="Showreel: level dashboards, puzzle workbench and live-ops footage"></video>
+    <video src="media/video/reel.mp4" poster="media/video/reel.webp" data-audio muted loop playsinline preload="none" aria-label="Showreel: level dashboards, puzzle workbench and live-ops footage"></video>
     <figcaption><b>Reel</b><span>Sand Flow level generator</span><span>Yarn Collect level studio</span><span>Doku puzzle workbench</span><span>Hexa Sort live-ops</span></figcaption>
   </figure>
+  <div class="reel-bar"><button class="snd" type="button" data-sound-toggle aria-pressed="false"><span>Sound off</span></button><small>Turn sound on for the soundtrack</small></div>
 </div></section>
 
 <section class="sec" id="shipped"><div class="wrap">
@@ -88,11 +107,12 @@
 
 <section class="sec" id="work"><div class="wrap">
   <div class="sec-head reveal">
-    <div><div class="mono">02 / Case studies</div><h2>How I work, in six stories</h2></div>
+    <div><div class="mono">02 / Case studies · Level select</div><h2>How I work, in six stories</h2></div>
     <p>Level tooling, live-ops, puzzle design, a solo build and the analytics that tie them together.</p>
   </div>
   <div class="cases">
     <a class="case wide reveal" href="work/level-tooling.html">
+      <span class="lvl" aria-hidden="true"><b>1</b><img src="media/store/icon-sandflow.webp" alt="" loading="lazy"><img src="media/store/icon-yarncollect.webp" alt="" loading="lazy"></span>
       <div class="art collage">
         <img src="media/tool/sf-collections.webp" alt="Sand Flow level dashboard: collections of generated levels" loading="lazy">
         <img src="media/tool/sf-curve.webp" alt="Sand Flow curve tuning with solver winning paths" loading="lazy">
@@ -108,6 +128,7 @@
       </div>
     </a>
     <a class="case wide reveal" href="work/hexa-sort-liveops.html">
+      <span class="lvl" aria-hidden="true"><b>2</b></span>
       <div class="art" id="hexa-art">
         <div class="ph t1"><img src="media/hexa/card-1.webp" alt="Roll &amp; Win event screen designed for Hexa Sort" loading="lazy"></div>
         <div class="ph t2"><img src="media/hexa/card-col.webp" alt="Collections main screen with card sets and grand prize" loading="lazy"></div>
@@ -123,6 +144,7 @@
       </div>
     </a>
     <a class="case reveal" href="work/doku-puzzles.html">
+      <span class="lvl" aria-hidden="true"><b>3</b><img src="media/store/icon-kittydoku.webp" alt="" loading="lazy"><img src="media/store/icon-cardoku.webp" alt="" loading="lazy"></span>
       <div class="art">
         <img src="media/doku/md-late.webp" alt="Deduction puzzle board with cars, mice and water" loading="lazy" style="height:84%;width:auto;border-radius:12px">
         <div class="ph t3"><img src="media/store/kittydoku-1.webp" alt="KittyDoku store screenshot" loading="lazy"></div>
@@ -135,6 +157,7 @@
       </div>
     </a>
     <a class="case reveal" href="work/mice-flow.html">
+      <span class="lvl" aria-hidden="true"><b>4</b><img src="media/store/icon-miceflow.webp" alt="" loading="lazy"></span>
       <div class="art">
         <div class="ph t1"><img src="media/mice/level-03.webp" alt="Mice Flow level 3" loading="lazy"></div>
         <div class="ph t2"><img src="media/hero/mice.webp" alt="Mice Flow castle level" loading="lazy"></div>
@@ -148,6 +171,7 @@
       </div>
     </a>
     <a class="case reveal" href="work/difficulty-analytics.html">
+      <span class="lvl" aria-hidden="true"><b>5</b></span>
       <div class="art"><img src="media/analytics/bands.svg" alt="Illustrative difficulty bands chart" loading="lazy" style="width:88%;height:auto"></div>
       <div class="body">
         <div class="mono">Difficulty · Analytics</div>
@@ -157,6 +181,7 @@
       </div>
     </a>
     <a class="case reveal" href="work/link-sort-study.html">
+      <span class="lvl" aria-hidden="true"><b>6</b></span>
       <div class="art"><div class="big-num">30.5<small>vs</small>10.4</div></div>
       <div class="body">
         <div class="mono">Independent study · FTUE</div>
@@ -205,5 +230,6 @@
 
 <footer><div class="wrap"><span>© <span id="year">2026</span> Arsalan Awan</span><span>Lahore, Pakistan · arsalanawan1853@gmail.com</span></div></footer>
 <script src="js/site.js"></script>
+<script src="js/play.js"></script>
 </body>
 </html>

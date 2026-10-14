@@ -233,3 +233,84 @@ footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wr
   .js .reveal { opacity: 1; transform: none; transition: none; }
   .btn, .case, .game { transition: none; }
 }
+
+/* Playable level (hero). Device card in front, two tilted phones behind it. */
+.stage { position: relative; display: flex; justify-content: center; align-items: center; min-height: 560px; }
+.stage .back { position: absolute; width: 170px; opacity: .8; }
+.stage .t1 { left: 0; top: 36px; } .stage .t3 { right: 0; top: 90px; }
+.play { position: relative; z-index: 2; width: 350px; max-width: 100%; background: linear-gradient(180deg, #151a24, #10141b); border: 1px solid var(--line);
+  border-radius: 28px; padding: 18px 18px 16px; box-shadow: 0 40px 90px rgba(0,0,0,.6), 0 0 0 1px #ffffff0d; overflow: hidden; }
+.play-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.snd { font: 600 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--mute); background: transparent; border: 1px solid var(--line);
+  border-radius: 99px; padding: 8px 12px; min-height: 32px; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+.snd::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--dim); }
+.snd[aria-pressed="true"] { color: var(--acc); border-color: #b6f36a55; }
+.snd[aria-pressed="true"]::before { background: var(--acc); box-shadow: 0 0 8px var(--acc); }
+.play-hud { display: flex; justify-content: space-between; align-items: baseline; margin-top: 14px; }
+.play-lvl { font: 800 24px/1 var(--display); }
+.play-moves { font: 500 12px/1 var(--mono); color: var(--dim); }
+.play .play-tip { font-size: 14px; margin: 8px 0 0; min-height: 2.6em; }
+.tubes { --ball: 38px; display: flex; justify-content: center; align-items: flex-end; gap: 12px; padding: 22px 0 6px; min-height: calc(var(--cap, 3) * (var(--ball) + 4px) + 54px); }
+.tube { position: relative; width: calc(var(--ball) + 14px); height: calc(var(--cap, 3) * (var(--ball) + 4px) + 14px); padding: 6px 0; display: flex; flex-direction: column-reverse;
+  align-items: center; gap: 4px; background: #ffffff08; border: 2px solid #2c3442; border-top-color: transparent; border-radius: 6px 6px 22px 22px; cursor: pointer;
+  transition: border-color .15s, transform .15s, box-shadow .2s; -webkit-tap-highlight-color: transparent; }
+.tube:hover { border-color: #3d4759; border-top-color: transparent; }
+.tube.sel { border-color: var(--acc); border-top-color: transparent; }
+.tube.done { border-color: #ffd34d; border-top-color: transparent; box-shadow: 0 0 22px #ffd34d44; }
+.tube.hint::after { content: 'tap'; position: absolute; left: 50%; top: -30px; transform: translateX(-50%); font: 700 11px/1 var(--mono); text-transform: uppercase;
+  letter-spacing: .1em; color: var(--acc-ink); background: var(--acc); padding: 5px 8px; border-radius: 99px; animation: bob 1s ease-in-out infinite; }
+.tube.hint { box-shadow: 0 0 0 3px #b6f36a55; animation: glow 1s ease-in-out infinite; }
+.ball { position: relative; width: var(--ball); height: var(--ball); border-radius: 50%; flex: none; transition: transform .18s cubic-bezier(.3,1.6,.5,1);
+  box-shadow: inset -5px -6px 0 rgba(0,0,0,.18), inset 4px 5px 0 rgba(255,255,255,.35); }
+.ball[data-c="a"] { background: #b6f36a; } .ball[data-c="b"] { background: #ff6b9a; } .ball[data-c="c"] { background: #5cc8ff; } .ball[data-c="d"] { background: #ffd34d; }
+/* A shape per colour, so the puzzle doesn't rely on colour alone. */
+.ball::after { content: ''; position: absolute; left: 50%; top: 50%; width: 12px; height: 12px; transform: translate(-50%,-50%); background: rgba(11,13,18,.45); }
+.ball[data-c="a"]::after { border-radius: 50%; }
+.ball[data-c="b"]::after { transform: translate(-50%,-50%) rotate(45deg); width: 11px; height: 11px; }
+.ball[data-c="c"]::after { clip-path: polygon(50% 0, 100% 100%, 0 100%); width: 14px; }
+.ball[data-c="d"]::after { height: 5px; width: 15px; border-radius: 3px; }
+.ball.lift { transform: translateY(-14px); }
+.ball.drop { animation: drop .38s cubic-bezier(.3,1.5,.5,1) both; }
+.tube.nope { animation: nope .3s; }
+@keyframes drop { 0% { transform: translateY(-46px) scale(.9, 1.1); opacity: .2; } 70% { transform: translateY(2px) scale(1.12, .86); opacity: 1; } 100% { transform: none; } }
+@keyframes nope { 20%, 60% { transform: translateX(-5px); } 40%, 80% { transform: translateX(5px); } }
+@keyframes bob { 50% { transform: translate(-50%, -5px); } }
+@keyframes glow { 50% { box-shadow: 0 0 0 6px #b6f36a22; } }
+.play-solver { color: var(--acc); font-size: 11px; text-align: center; margin-top: 10px; }
+.play-solver::before { content: '● '; }
+.play-solver.dead { color: #ff7a7a; } .play-solver.dead::before { content: '✕ '; }
+.play-ctl { display: flex; justify-content: center; gap: 8px; margin-top: 12px; }
+.play-ctl button { font: 600 13px/1 var(--body); color: var(--ink); background: var(--panel-2); border: 1px solid var(--line); border-radius: 99px; padding: 0 16px; min-height: 44px; cursor: pointer; }
+.play-ctl button:hover { border-color: #3d4759; }
+.play-ctl button:disabled { opacity: .4; cursor: default; }
+.play-clear { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center;
+  padding: 24px; background: rgba(11,13,18,.9); backdrop-filter: blur(4px); animation: pop-in .35s cubic-bezier(.3,1.5,.5,1) both; }
+.play-clear[hidden] { display: none; }
+.play-clear .clear-title { font: 800 40px/1 var(--display); text-transform: uppercase; }
+.play-clear .clear-sub { margin: 0 0 8px; max-width: 260px; }
+.play-clear .btn[hidden] { display: none; }
+.stars { display: flex; gap: 8px; align-items: flex-end; }
+.star { width: 46px; height: 46px; background: #2a3140; clip-path: polygon(50% 4%, 63% 35%, 96% 38%, 71% 60%, 79% 94%, 50% 76%, 21% 94%, 29% 60%, 4% 38%, 37% 35%); }
+.star:nth-child(2) { width: 58px; height: 58px; }
+.star.on { background: #ffd34d; animation: star-in .45s cubic-bezier(.3,1.7,.5,1) both; }
+@keyframes star-in { 0% { transform: scale(0) rotate(-60deg); } 100% { transform: none; } }
+@keyframes pop-in { 0% { opacity: 0; transform: scale(.9); } 100% { opacity: 1; transform: none; } }
+.confetti { position: absolute; left: 50%; top: 45%; width: 8px; height: 10px; border-radius: 2px; z-index: 4; pointer-events: none; }
+.reel-bar { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+.reel-bar small { color: var(--dim); font-size: 13px; }
+@media (max-width: 1000px) { .stage { min-height: 0; padding: 10px 0 20px; } .stage .back { display: none; } }
+@media (max-width: 420px) { .play { padding: 16px 12px 14px; } .tubes { --ball: 34px; gap: 8px; } }
+@media (prefers-reduced-motion: reduce) { .tube.hint, .tube.hint::after, .play-clear, .star.on { animation: none; } .ball { transition: none; } }
+
+/* Level select: each case card carries a level node; a gold star marks the ones this visitor has opened. */
+.case { position: relative; }
+.case .lvl { position: absolute; left: 16px; top: 16px; z-index: 6; display: flex; align-items: center; gap: 8px; }
+.case .lvl b { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; font: 800 22px/1 var(--display); color: var(--acc-ink); background: var(--acc);
+  box-shadow: 0 5px 0 #6f9d36, 0 12px 24px rgba(0,0,0,.45); transition: transform .2s cubic-bezier(.3,1.6,.5,1); }
+.case .lvl img { width: 34px; height: 34px; border-radius: 9px; box-shadow: 0 6px 16px rgba(0,0,0,.5); }
+.case:hover .lvl b, .case:focus-visible .lvl b { transform: translateY(-4px) scale(1.08); }
+.case.cleared .lvl b { background: #ffd34d; box-shadow: 0 5px 0 #b38b1f, 0 12px 24px rgba(0,0,0,.45); }
+.case.cleared .lvl b::after { content: '★'; position: absolute; right: -6px; top: -6px; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center;
+  font: 12px/1 var(--body); color: #ffd34d; background: var(--bg); border: 1px solid #ffd34d; }
+.case .lvl b { position: relative; }
+@media (prefers-reduced-motion: reduce) { .case .lvl b { transition: none; } }
