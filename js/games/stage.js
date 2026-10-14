@@ -6,7 +6,9 @@ import * as THREE from 'three';
 import { RoomEnvironment } from '../vendor/RoomEnvironment.js';
 import { applyView } from './common.js';
 
-const stages = [...document.querySelectorAll('[data-stage]')];
+// ?only=<id> loads just that game (used to test one game in isolation).
+const only = new URLSearchParams(location.search).get('only');
+const stages = [...document.querySelectorAll('[data-stage]')].filter(el => !only || el.dataset.stage === only);
 if (stages.length) init();
 
 function init() {
@@ -30,13 +32,17 @@ function init() {
 
   for (const v of views) {
     const ui = v.el.querySelector('.arcade-ui');
-    const pill = el('div', 'arcade-pill'), prompt = el('button', 'arcade-prompt'), card = el('div', 'arcade-card');
-    prompt.type = 'button'; prompt.innerHTML = '<b>▶ Tap to play</b><span>A bot is playing. Your turn?</span>';
-    ui.append(pill, prompt, card); card.hidden = true; prompt.hidden = reduce;
-    Object.assign(v, { ui, pill, prompt, card });
-    const takeOver = () => { if (!v.auto || !v.game) return; v.auto = false; v.el.classList.remove('attract'); prompt.hidden = true; v.game.autoplay(false); v.game.restart(); };
+    const pill = el('div', 'arcade-pill'), prompt = el('button', 'arcade-prompt'), card = el('div', 'arcade-card'), reload = el('button', 'arcade-reload');
+    prompt.type = 'button'; prompt.innerHTML = '<b>▶ Tap to play</b><span>A bot is playing. Jump in any time.</span>';
+    reload.type = 'button'; reload.setAttribute('aria-label', 'Restart this level'); reload.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M17.7 6.3A8 8 0 1 0 20 12h-2.5a5.5 5.5 0 1 1-1.6-3.9L13 11h7V4z" fill="currentColor"/></svg>';
+    ui.append(pill, prompt, card, reload); card.hidden = true; prompt.hidden = reduce;
+    Object.assign(v, { ui, pill, prompt, card, reload });
+    // Jumping in keeps the level the bot was playing: the visitor carries on from there.
+    const takeOver = () => { if (!v.auto || !v.game) return; v.auto = false; v.el.classList.remove('attract'); prompt.hidden = true; v.game.autoplay(false); v.game.takeover ? v.game.takeover() : v.game.restart(); };
     prompt.addEventListener('click', takeOver);
+    reload.addEventListener('click', () => { if (!v.game) return; takeOver(); v.card.hidden = true; v.game.reloadLevel ? v.game.reloadLevel() : v.game.restart(); sound('tap'); });
     v.el.addEventListener('pointerdown', e => { if (v.auto && !e.target.closest('button')) takeOver(); }, true);
+    v.takeOver = takeOver;
     // Pointer tilt: the board leans toward the pointer while it is over the stage.
     v.el.addEventListener('pointermove', e => { const r = v.el.getBoundingClientRect(); v.px = ((e.clientX - r.left) / r.width) * 2 - 1; v.py = ((e.clientY - r.top) / r.height) * 2 - 1; v.hover = true; v.touched = performance.now(); });
     v.el.addEventListener('pointerleave', () => { v.hover = false; });
@@ -47,13 +53,15 @@ function init() {
     const mod = await import(`./${v.id}/game.js`);
     const api = {
       THREE, renderer, env, el: v.el, canvas: v.el, ui: v.ui, sound, reduce, base: `media/games/${v.id}/`,
+      loadSounds: map => { v.ownSounds = true; return loadSounds(`media/games/${v.id}/`, map); }, // then the stage's synth stays quiet
+      shake: (amt = 1) => shakeStage(v.el, amt),
       setLevel: t => { v.pill.textContent = t; },
       result({ win, title, sub, next, retry, last }) {
         v.card.className = 'arcade-card ' + (win ? 'win' : 'lose');
         v.card.innerHTML = `<b>${title}</b><p>${sub || ''}</p>`;
         if (next) v.card.append(button(win ? (last ? 'Play again' : 'Next level →') : 'Retry', next, 'btn'));
         if (retry && win && !last) v.card.append(button('Replay', retry, 'btn o'));
-        v.card.hidden = false; if (!v.auto) sound(win ? 'clear' : 'lose');
+        v.card.hidden = false; if (!v.auto && !v.ownSounds) sound(win ? 'clear' : 'lose');
         v.card.querySelector('button')?.focus({ preventScroll: true });
       },
       hideResult: () => { v.card.hidden = true; },
@@ -93,5 +101,26 @@ function init() {
   document.addEventListener('visibilitychange', () => { running = !document.hidden; if (running) { last = performance.now(); requestAnimationFrame(frame); } });
 }
 
+// Shipped sound effects: decoded once with Web Audio, played only while the visitor has sound on.
+// play(name, { rate, volume }) — a little pitch variety keeps repeats from sounding mechanical.
+let actx = null;
+async function loadSounds(base, map) {
+  const bufs = {};
+  const ctx = () => (actx = actx || new (window.AudioContext || window.webkitAudioContext)());
+  await Promise.all(Object.entries(map).map(async ([k, f]) => {
+    try { const ab = await (await fetch(base + f)).arrayBuffer(); bufs[k] = await ctx().decodeAudioData(ab); } catch (e) {}
+  }));
+  return (name, { rate = 1, volume = 0.7 } = {}) => {
+    if (!window.sound?.on || !bufs[name]) return;
+    const c = ctx(); if (c.state === 'suspended') c.resume();
+    const src = c.createBufferSource(), g = c.createGain(); src.buffer = bufs[name]; src.playbackRate.value = rate; g.gain.value = volume;
+    src.connect(g).connect(c.destination); src.start();
+  };
+}
+// Screen shake for the DOM stage (the 3D view follows it because it draws into the stage's rectangle).
+function shakeStage(el, amt) {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches || !el.animate) return;
+  const a = 6 * amt; el.animate([{ transform: 'translate(0,0)' }, { transform: `translate(${a}px,${-a / 2}px)` }, { transform: `translate(${-a}px,${a / 3}px)` }, { transform: `translate(${a / 2}px,${a / 2}px)` }, { transform: 'translate(0,0)' }], { duration: 260, easing: 'ease-out' });
+}
 function el(tag, cls) { const e = document.createElement(tag); e.className = cls; return e; }
 function button(text, fn, cls) { const b = document.createElement('button'); b.type = 'button'; b.className = cls; b.textContent = text; b.addEventListener('click', fn); return b; }

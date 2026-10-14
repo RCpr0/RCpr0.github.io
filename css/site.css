@@ -337,3 +337,10 @@ footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wr
   .play-stage { height: min(125vw, 680px); min-height: 0; margin: 0 calc(var(--gutter) * -1); }
   .game-sec { padding: 40px 0 24px; }
 }
+.arcade-reload { position: absolute; left: 10px; top: 10px; width: 44px; height: 44px; border: 0; border-radius: 14px; background: #ffffffe6; color: #3b2a5a; display: grid; place-items: center; cursor: pointer; box-shadow: 0 3px 0 #00000026; transition: transform .15s; }
+.arcade-reload:hover { transform: rotate(-30deg) scale(1.06); }
+.attract .arcade-reload { opacity: .75; }
+.arcade-card.lose { background: rgba(70,10,30,.86); animation: pop-in .35s cubic-bezier(.3,1.5,.5,1) both, card-shake .5s .1s both; }
+.arcade-card.lose b { color: #ffd6dc; }
+@keyframes card-shake { 20%, 60% { transform: translateX(-10px) rotate(-1deg); } 40%, 80% { transform: translateX(10px) rotate(1deg); } }
+@media (prefers-reduced-motion: reduce) { .arcade-card.lose { animation: none; } }

@@ -1,6 +1,8 @@
-// Sand Flow, playable in the browser. Sand physics, grid and capacity rules are the dashboard's verified ports of the
-// shipped C# (./sim). The belt here adds what the shipped belt does on top of that sim: x4 speed while a cart is off
-// the picture, x1.7 when the last carts are out, and carts that queue instead of overlapping.
+// Sand Flow, playable in the browser. Sand physics, grid (every mechanic) and capacity rules are the dashboard's verified
+// ports of the shipped C# (./sim). The belt here adds what the shipped belt does on top of that sim: x4 speed while a
+// cart is off the picture, x1.7 when the last carts are out, and carts that queue instead of overlapping.
+// The shipped ConveyorBelt runs SandSimulation.UpdateSimulation() every fixed tick, and that runs Simulate()
+// SimulateSteps (7) times; the dashboard's headless runner ran it once. We run the shipped count (SIM_STEPS).
 import { SAND_CFG } from './sim/config.js';
 import { SandSim, roundHalfToEven } from './sim/sandSim.js';
 import { SimGridBasic } from './sim/grid.js';
@@ -8,6 +10,7 @@ import { makeBucket } from './sim/belt.js';
 import { chooseEager } from './policy.js';
 
 export const DT = 1 / 60;
+export const SIM_STEPS = SAND_CFG.simulateSteps;
 export const GAME_CFG = { maxSpots: 5, spotSpeed: 0.12, levelFailTimeout: 6, boost: 4, fastFactor: 1.7, minGap: 0.1, entryT: 0.94, beltWidth: 256 };
 const CHARS = '0123456789abcdefghijklmnopqrstuvwxyz';
 
@@ -21,7 +24,12 @@ export class SandFlowGame {
     this.grid = new SimGridBasic(); this.grid.init(level);
     this.belt = new Belt(cfg, this.sand);
     this.ticks = 0; this.started = false; this.result = null; this.events = [];
+    this.ids = new WeakMap(); this.nextId = 1;
+    // Mechanic cells as authored (the sim keeps their rules, not what they look like).
+    this.mech = level.cells.filter(c => c.kind).map(c => ({ x: c.x, y: c.y, kind: c.kind, keyColorIndex: c.keyColorIndex || 0, direction: c.direction || 0 }));
   }
+  // A stable id per live cart cell (stack spawns and picks swap cell objects, so the renderer keys on this).
+  idOf(cell) { let id = this.ids.get(cell); if (!id) { id = this.nextId++; this.ids.set(cell, id); } return id; }
   get over() { return this.result !== null; }
   get progress() { return this.sand.sandRemovedPercentage / 100; } // sim reports a whole-number percent
 
@@ -30,7 +38,25 @@ export class SandFlowGame {
     const out = [], g = this.grid;
     for (let x = 0; x < g.width; x++) for (let y = 0; y < g.height; y++) {
       const c = g.getCell({ x, y });
-      if (c.isBucket) out.push({ x, y, ct: c.colorType, mystery: c.isMystery && !c.isMysterySolved, available: c.isPickable(g.globalPickCount) && (!c.isSticky || c.isAvailable) });
+      if (c.isBucket) out.push({
+        id: this.idOf(c), x, y, ct: c.colorType,
+        hasPath: c.isAvailable, // faces up (shipped Bucket.SetRotation follows the path alone)
+        mystery: c.isMystery && !c.isMysterySolved,
+        ice: Math.max(0, c.iceCount - g.globalPickCount), // crates count down one per cart sent
+        available: c.isPickable(g.globalPickCount) && (!c.isSticky || c.isAvailable),
+      });
+    }
+    return out;
+  }
+  // Generators (with carts still inside), locks and keys that are still on the board.
+  mechanics() {
+    const g = this.grid, out = [];
+    for (const m of this.mech) {
+      const c = g.getCell(m), live = c && c.isMechanic;
+      if (m.kind === 'stack') {
+        const st = g.getStacks().find(s => s.stackIndex.x === m.x && s.stackIndex.y === m.y);
+        out.push({ ...m, remaining: st ? st.buckets.length - st.moveIndex : 0 });
+      } else if ((m.kind === 'lock' || m.kind === 'key') && live) out.push(m);
     }
     return out;
   }
@@ -45,10 +71,10 @@ export class SandFlowGame {
     if (this.over) return { ok: false, why: 'over' };
     const cell = this.grid.getCell({ x, y });
     if (!cell || !cell.isBucket) return { ok: false, why: 'empty' };
-    if (!cell.isPickable(this.grid.globalPickCount)) return { ok: false, why: 'blocked' };
+    if (!cell.isPickable(this.grid.globalPickCount)) return { ok: false, why: cell.isMystery && !cell.isMysterySolved ? 'mystery' : cell.iceCount > this.grid.globalPickCount ? 'ice' : 'blocked' };
     if (!this.belt.hasFreeSpot) return { ok: false, why: 'full' };
     const path = this.pathToBelt(x, y);
-    const bucket = makeBucket({ x, y }, cell.colorType, cell.capacity);
+    const bucket = makeBucket({ x, y }, cell.colorType, cell.capacity); bucket.id = this.idOf(cell);
     this.belt.add(bucket);
     this.grid.pick(cell);
     this.started = true;
@@ -83,7 +109,7 @@ export class SandFlowGame {
     if (this.over) return null;
     const fast = this.grid.getTotalBucketCount() + this.belt.occupiedSpots <= this.cfg.maxSpots;
     const r = this.belt.tick(DT, fast ? this.cfg.fastFactor : 1);
-    if (this.started) this.sand.simulate();
+    if (this.started) for (let k = 0; k < SIM_STEPS; k++) this.sand.simulate();
     this.ticks++;
     if (r.failed) this.result = 'lose';
     else if (this.sand.isAllSandRemoved && this.belt.occupiedSpots === 0) this.result = 'win';
@@ -130,6 +156,6 @@ class Belt {
     this.spots = this.spots.filter(b => !filled.includes(b));
     this.idle = removedAny ? 0 : this.idle + dt;
     const failed = this.spots.length >= maxSpots && this.idle >= levelFailTimeout;
-    return { filled, collected, failed, warn: this.spots.length >= maxSpots && this.idle > 1 };
+    return { filled, collected, failed, warn: this.spots.length >= maxSpots && this.idle > 1, danger: this.spots.length >= maxSpots ? Math.min(1, this.idle / levelFailTimeout) : 0 };
   }
 }

@@ -2,7 +2,7 @@
 // DispenseCount, SplineSpot.CheckNearbyContainer and Game.IsBoardDeadlocked. The road is the game's open cubic Bezier
 // through the waypoints (tangent = waypoint heading x 1.1), closed when the first and last waypoints meet.
 export const CAPACITY = 8, SLOT_SPACING = 1.95, DETECT = 3, LOOK_AHEAD = 0.5, BEHIND = 0.03, PREV_RESET = 2;
-export const BASKET = { w: 2.95, h: 5.25, tip: 1.5 };
+export const BASKET = { w: 2.95, h: 5.25, tip: 2.375 }; // mouth = the prefab's EntryPoint, 5.0 in front of the basket centre
 const TAN = 1.1;
 
 export class Road {

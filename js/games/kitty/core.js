@@ -1,6 +1,8 @@
 // KittyDoku game wrapper around the level workbench's own rules (rules.js): place, confirm, lives, hints, and the
-// cells a confirmed cat rules out (shown as crosses, as the shipped game does).
-import { createState, placeCell, eraseCell, isSolved, isConfirmed, isLocked, applyHint, pickHint, hintDir, trace, neighbours8, STARTING_LIVES } from './rules.js';
+// cells a confirmed cat books (BoardState.RecomputeMarks in the shipped game: the beam, the eight neighbours and the
+// region of every cat that is on the board and not wrong). Booked cells show a paw and refuse a cat (CanPlace), at no
+// cost; the shipped game never shows crosses on its own (they were a player-toggled note, not used here).
+import { candidateDirs, createState, placeCell, eraseCell, isSolved, isConfirmed, isLocked, applyHint, pickHint, hintDir, trace, neighbours8, STARTING_LIVES } from './rules.js';
 
 export const LEVELS = [3, 8, 19, 29, 43];
 
@@ -14,9 +16,20 @@ export class KittyGame {
   isGiven(i) { return isLocked(this.state, i); }
   catAt(i) { return this.state.placements.has(i) ? this.state.placements.get(i) : null; }
   cats() { return [...this.state.placements].map(([i, dir]) => ({ i, dir, confirmed: isConfirmed(this.state, i), given: isLocked(this.state, i) })); }
+  // BoardState.CanPlace: a playable, empty, unbooked cell and a facing its region allows.
+  canPlace(i, dir) {
+    const c = this.board.cells[i];
+    return !this.over && !!c && c.kind === 'play' && !this.state.placements.has(i) && !this.ruledOut().has(i) && (!dir || candidateDirs(this.puzzle, i).includes(dir));
+  }
+  // The dog whose line of sight covers cell i (a cat dropped there is wrong and gets scared off), or -1.
+  watchedBy(i) {
+    return this.board.cells.findIndex((c, k) => c.kind === 'dog' && trace(this.board, k, c.dir, new Set()).cells.has(i));
+  }
   // Place a cat facing `dir`. Right: it stays, confirmed. Wrong: a life is lost and the cat goes back to the tray.
+  // A booked or occupied cell refuses the cat outright (no life lost), as the shipped CanPlace does.
   place(i, dir) {
     if (this.over) return { ok: false };
+    if (this.ruledOut().has(i)) return { ok: false, booked: true };
     if (this.state.placements.has(i) && isConfirmed(this.state, i)) return { ok: false };
     if (!placeCell(this.state, i, dir)) return { ok: false };
     const correct = isConfirmed(this.state, i);
@@ -29,7 +42,7 @@ export class KittyGame {
     const r = pickHint(this.puzzle, this.state.placements, this.state.confirmed);
     return r ? { cell: r.cell, dir: hintDir(this.state, r.cell, r.dir) } : null;
   }
-  // Cells no cat can go: next to a confirmed cat, in its region, or in its line of sight.
+  // Booked cells: next to a confirmed cat, in its region, or in its line of sight (and not holding a cat).
   ruledOut() {
     const out = new Set(), conf = this.cats().filter(c => c.confirmed), cats = new Set(conf.map(c => c.i));
     for (const c of conf) {
