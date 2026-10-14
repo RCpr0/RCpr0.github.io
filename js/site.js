@@ -2,10 +2,10 @@ document.documentElement.classList.add('js');
 // Videos autoplay (muted, looping) while on screen and pause off screen; tap/Enter toggles; scroll reveals; sticky-nav border.
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// Sound: off by default, one preference for the reel and the playable level. SFX are synthesized with Web Audio.
+// Sound: off on every visit (browsers refuse unmuted autoplay without a tap), shared by the reel and the playable level.
+// SFX are synthesized with Web Audio. The buttons always show whether the reel is actually muted.
 window.sound = (() => {
   let on = false, ctx = null;
-  try { on = localStorage.getItem('sound') === 'on'; } catch (e) {}
   const notes = { pick: [[660, .05]], drop: [[520, .04], [780, .07]], nope: [[180, .09]], clear: [[523, .08], [659, .08], [784, .08], [1047, .25]], star: [[1319, .18]] };
   const play = name => {
     if (!on || !notes[name]) return;
@@ -25,8 +25,7 @@ window.sound = (() => {
     document.querySelectorAll('video[data-audio]').forEach(v => { v.muted = !on; });
   };
   const toggle = () => {
-    on = !on; try { localStorage.setItem('sound', on ? 'on' : 'off'); } catch (e) {}
-    sync();
+    on = !on; sync();
     // Unmuting the reel from the button: start it too, inside this user gesture so the browser allows sound.
     const v = document.querySelector('video[data-audio]');
     if (on && v && v.closest('[data-video]')?.classList.contains('playing')) v.play().catch(() => {});
@@ -34,7 +33,7 @@ window.sound = (() => {
   };
   document.querySelectorAll('[data-sound-toggle]').forEach(b => b.addEventListener('click', toggle));
   sync();
-  return { play, get on() { return on; } };
+  return { play, off: () => { on = false; sync(); }, get on() { return on; } };
 })();
 
 const seen = 'IntersectionObserver' in window && !reduce
@@ -46,7 +45,7 @@ document.querySelectorAll('[data-video]').forEach(el => {
   let held = false; // the viewer paused it, so scrolling back doesn't restart it
   const play = () => {
     el.classList.add('playing');
-    v.play().catch(e => { if (e.name === 'AbortError') return; if (v.muted) return el.classList.remove('playing'); v.muted = true; v.play().catch(() => el.classList.remove('playing')); });
+    v.play().catch(e => { if (e.name === 'AbortError') return; if (v.muted) return el.classList.remove('playing'); v.muted = true; if (v.hasAttribute('data-audio')) window.sound.off(); v.play().catch(() => el.classList.remove('playing')); });
   };
   const stop = () => { el.classList.remove('playing'); v.pause(); };
   const toggle = () => { if (v.paused) { held = false; play(); } else { held = true; stop(); } };
