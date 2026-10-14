@@ -177,7 +177,7 @@ export async function create(ctx) {
       if (auto) { lvl = G.result === 'win' ? (lvl + 1) % LEVELS.length : lvl; build(); return; }
       if (G.result === 'win') {
         const last = lvl === LEVELS.length - 1;
-        ctx.result({ win: true, title: last ? 'All clear!' : 'Purr-fect!', sub: last ? 'Five shipped levels, from first rules to the dog. 40 more in the store.' : `KittyDoku · level ${levels[lvl].n}`, next: () => { lvl = (lvl + 1) % LEVELS.length; build(); }, retry: () => build() });
+        ctx.result({ win: true, title: last ? 'All clear!' : 'Purr-fect!', sub: last ? 'Five shipped levels, from first rules to the dog. 45 more in the store.' : `KittyDoku · level ${levels[lvl].n}`, next: () => { lvl = (lvl + 1) % LEVELS.length; build(); }, retry: () => build() });
       } else ctx.result({ win: false, title: 'Out of lives', sub: 'Three wrong cats. Every square can be worked out without guessing.', next: () => build() });
     }, G.result === 'win' ? 1100 : 700);
   }
