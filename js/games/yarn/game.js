@@ -8,6 +8,7 @@ const HEX = { 0: '#FD2833', 1: '#248CFD', 2: '#FFEB3A', 3: '#87FF33', 4: '#F89A5
 const BALL_R = 0.42, ROAD_W = 1.72, TILT = 22 * Math.PI / 180, PRAISE = ['praise-great.webp', 'praise-nice.webp', 'praise-perfect.webp', 'praise-awesome.webp'];
 
 export async function create(ctx) {
+  let dead = false;
   const { THREE, base } = ctx;
   const [ballM, boxM, doneM, tunnelM, tunnelTex, roadTex, basketTex, yarnTex, bgTex, glassTex, praiseTex, levels] = await Promise.all([
     loadModel(base + 'YarnBall.json'), loadModel(base + 'YarnBox.json'), loadModel(base + 'BucketComplete.json'), loadModel(base + 'Tunnel.json'), loadTexture(base + 'tunnel.webp'),
@@ -170,13 +171,14 @@ export async function create(ctx) {
     }
     hud && (hud.textContent = `${G.onRoad()}/${G.usable}`);
     tweens.update(dt * Math.min(speed, 3));
-    if (G.over && !endTimer) { endTimer = 1; setTimeout(() => finish(G.result), G.result === 'win' ? 900 : 400); }
+    if (G.over && !endTimer) { endTimer = 1; const g0 = G; setTimeout(() => { if (G === g0) finish(g0.result); }, G.result === 'win' ? 900 : 400); } // a restart in between makes this timer stale
   }
   function finish(res) {
+    if (dead) return;
     if (auto) { lvl = res === 'win' ? (lvl + 1) % LEVELS.length : lvl; build(); return; }
     if (res === 'win') {
       const last = lvl === LEVELS.length - 1;
-      ctx.result({ win: true, title: last ? 'All clear!' : 'Level complete', sub: last ? `${LEVELS.length} shipped levels. 145 more in the store.` : `Yarn Collect · level ${LEVELS[lvl]}`,
+      ctx.result({ win: true, last, title: last ? 'All clear!' : 'Level complete', sub: last ? `${LEVELS.length} shipped levels. 145 more in the store.` : `Yarn Collect · level ${LEVELS[lvl]}`,
         next: () => { lvl = (lvl + 1) % LEVELS.length; build(); }, retry: () => build() });
     } else ctx.result({ win: false, title: 'Tangled!', sub: 'The road filled with yarn that had nowhere to go.', next: () => build() });
   }
@@ -189,11 +191,11 @@ export async function create(ctx) {
     restart() { auto = false; speed = 1; lvl = 0; build(); },
     test: {
       set speed(v) { speed = v; },
-      get state() { return { level: LEVELS[lvl], over: G.over, result: G.result, progress: G.baskets.filter(b => b.complete).length / G.baskets.length, onBelt: G.onRoad(), auto, time: G.time }; },
+      get state() { return { total: LEVELS.length, level: LEVELS[lvl], over: G.over, result: G.result, progress: G.baskets.filter(b => b.complete).length / G.baskets.length, onBelt: G.onRoad(), auto, time: G.time }; },
       baskets: () => G.baskets.map((b, i) => ({ i, n: b.balls.length, complete: b.complete })),
-      nextMove() { const i = G.botChoice(); return i < 0 ? null : this.screenOfBasket(i); },
+      nextMove() { if (G.time - G.lastTap < 0.45) return null; const i = G.botChoice(); return i < 0 ? null : this.screenOfBasket(i); },
       screenOfBasket(i) { const v = baskets[i].g.position.clone().project(camera), r = ctx.canvas.getBoundingClientRect(); return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; },
     },
-    destroy() { ctx.canvas.removeEventListener('pointerdown', onPointer); hud.remove(); disposeScene(scene); },
+    destroy() { dead = true; ctx.canvas.removeEventListener('pointerdown', onPointer); hud.remove(); disposeScene(scene); },
   };
 }

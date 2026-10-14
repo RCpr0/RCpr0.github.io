@@ -11,6 +11,7 @@ const VEC = { N: [0, -1], NE: [1, -1], E: [1, 0], SE: [1, 1], S: [0, 1], SW: [-1
 const CELL = 1, GAP = 0.07, PITCH = 52 * Math.PI / 180;
 
 export async function create(ctx) {
+  let dead = false;
   const { THREE, base } = ctx;
   const [catM, dogM, mouseM, faceTex, dogTex, dogEyes, mouseTex, mouseFace, pawTex, bushTex, roomTex, coats, levels] = await Promise.all([
     loadModel(base + 'Cat.json'), loadModel(base + 'Husky.json'), loadModel(base + 'Mouse.json'),
@@ -171,13 +172,15 @@ export async function create(ctx) {
     }
   }
   function end() {
-    if (endTimer) return; endTimer = 1;
+    if (endTimer || dead) return; endTimer = 1;
     if (G.result === 'win') for (const m of pieces.values()) setTimeout(() => happy(m), Math.random() * 300);
+    const g0 = G; // a restart in between makes this timer stale
     setTimeout(() => {
+      if (dead || G !== g0) return;
       if (auto) { lvl = G.result === 'win' ? (lvl + 1) % LEVELS.length : lvl; build(); return; }
       if (G.result === 'win') {
         const last = lvl === LEVELS.length - 1;
-        ctx.result({ win: true, title: last ? 'All clear!' : 'Purr-fect!', sub: last ? 'Five shipped levels, from first rules to the dog. 45 more in the store.' : `KittyDoku · level ${levels[lvl].n}`, next: () => { lvl = (lvl + 1) % LEVELS.length; build(); }, retry: () => build() });
+        ctx.result({ win: true, last, title: last ? 'All clear!' : 'Purr-fect!', sub: last ? 'Five shipped levels, from first rules to the dog. 45 more in the store.' : `KittyDoku · level ${levels[lvl].n}`, next: () => { lvl = (lvl + 1) % LEVELS.length; build(); }, retry: () => build() });
       } else ctx.result({ win: false, title: 'Out of lives', sub: 'Three wrong cats. Every square can be worked out without guessing.', next: () => build() });
     }, G.result === 'win' ? 1100 : 700);
   }
@@ -202,12 +205,12 @@ export async function create(ctx) {
     restart() { auto = false; speed = 1; lvl = 0; build(); },
     test: {
       set speed(v) { speed = v; },
-      get state() { return { level: lvl + 1, shipped: levels[lvl].n, over: G.over, result: G.result, progress: G.cats().filter(c => c.confirmed && !c.given).length, onBelt: 0, auto, lives: G.lives }; },
+      get state() { return { total: LEVELS.length, level: lvl + 1, shipped: levels[lvl].n, over: G.over, result: G.result, progress: G.cats().filter(c => c.confirmed && !c.given).length, onBelt: 0, auto, lives: G.lives }; },
       // Next player tap toward the shipped answer: the right tray cat first if it isn't selected, then the square.
       nextMove() { if (busy || G.over) return null; const mv = G.botMove(); if (!mv) return null; const k = trayCats.findIndex(t => t.dir === mv.dir); return k !== selected ? this.screenOf(trayCats[k].hit.position) : this.screenOf(cellPos(mv.cell).setY(0.3)); },
       wrongCell() { const sol = new Set(levels[lvl].puzzle.solution.positions); const i = levels[lvl].puzzle.board.cells.findIndex((c, k) => c.kind === 'play' && !sol.has(k) && !G.catAt(k)); return this.screenOf(cellPos(i).setY(0.3)); },
       screenOf(p) { const v = p.clone().project(camera), r = ctx.canvas.getBoundingClientRect(); return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; },
     },
-    destroy() { ctx.canvas.removeEventListener('pointerdown', onPointer); hud.remove(); banner.remove(); hintBtn.remove(); disposeScene(scene); },
+    destroy() { dead = true; ctx.canvas.removeEventListener('pointerdown', onPointer); hud.remove(); banner.remove(); hintBtn.remove(); disposeScene(scene); },
   };
 }

@@ -35,10 +35,10 @@ function init() {
   const api = {
     THREE, renderer, canvas, ui, sound, reduce,
     setLevel: t => { pill.textContent = t; },
-    result({ win, title, sub, next, retry }) {
+    result({ win, title, sub, next, retry, last }) {
       card.className = 'arcade-card ' + (win ? 'win' : 'lose');
       card.innerHTML = `<b>${title}</b><p>${sub || ''}</p>`;
-      if (next) card.append(button(win ? 'Next level →' : 'Retry', next, 'btn'));
+      if (next) card.append(button(win ? (last ? 'Play again' : 'Next level →') : 'Retry', next, 'btn'));
       if (retry && win) card.append(button('Replay', retry, 'btn o'));
       card.hidden = false; sound(win ? 'clear' : 'lose');
       card.querySelector('button')?.focus({ preventScroll: true });
@@ -54,7 +54,9 @@ function init() {
     const mod = await import(`./${id}/game.js`);
     if (my !== token) return;
     const { w, h } = size();
-    game = await mod.create({ ...api, base: `media/games/${id}/`, w, h }); game.id = id;
+    // A replaced game may still have end-of-level timers running: its UI calls go nowhere once it is stale.
+    const live = fn => (...a) => (my === token ? fn(...a) : undefined);
+    game = await mod.create({ ...api, setLevel: live(api.setLevel), result: live(api.result), hideResult: live(api.hideResult), base: `media/games/${id}/`, w, h }); game.id = id;
     if (my !== token) { game.destroy(); return; }
     current = id; root.classList.remove('loading'); resize();
     attract(!reduce);

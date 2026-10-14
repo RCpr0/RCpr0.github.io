@@ -9,6 +9,7 @@ const CELL = 0.7, PIC = 3.6, BELT_Z = -0.95, R = 0.42, BACK = 2.5, CAM_PITCH = 5
 const RGB = new Map(PALETTE.map(p => [p.ct, [p.r, p.g, p.b]]));
 
 export async function create(ctx) {
+  let dead = false;
   const { THREE, base } = ctx;
   const [cartM, outlineM, cellM, wallM, cartTex, wallTex, beltTex, levels] = await Promise.all([
     loadModel(base + 'Cart.json'), loadModel(base + 'Cart_Outline.json'), loadModel(base + 'Cell.json'), loadModel(base + 'WallEdgy.json'),
@@ -205,7 +206,7 @@ export async function create(ctx) {
     }
     pc.update(dt * speed);
     tweens.update(dt * Math.min(speed, 3));
-    if (G.over && !endTimer) { endTimer = 1; setTimeout(() => finish(G.result), G.result === 'win' ? 500 : 300); }
+    if (G.over && !endTimer) { endTimer = 1; const g0 = G; setTimeout(() => { if (G === g0) finish(g0.result); }, G.result === 'win' ? 500 : 300); } // a restart in between makes this timer stale
   }
   // Attract-mode bot: the dashboard's eager rule (colour with most sand in reach, then nearest the belt), one cart every third of a second.
   function autoStep() {
@@ -229,12 +230,13 @@ export async function create(ctx) {
     tweens.add(0.45, k => { m.position.y = y0 + k * 0.6; m.scale.setScalar(Math.max(0.001, 1.15 - k * 1.15)); }, easeInOut, () => { scene.remove(m); onBelt.delete(b); });
   }
   function finish(res) {
+    if (dead) return;
     if (auto) { // attract mode loops through the levels
       lvl = res === 'win' ? (lvl + 1) % LEVELS.length : lvl; build(); return;
     }
     if (res === 'win') {
       const last = lvl === LEVELS.length - 1;
-      ctx.result({ win: true, title: last ? 'All clear!' : 'Level complete', sub: last ? `${LEVELS.length} shipped levels. 496 more in the store.` : `Sand Flow · level ${LEVELS[lvl]}`,
+      ctx.result({ win: true, last, title: last ? 'All clear!' : 'Level complete', sub: last ? `${LEVELS.length} shipped levels. 496 more in the store.` : `Sand Flow · level ${LEVELS[lvl]}`,
         next: () => { lvl = (lvl + 1) % LEVELS.length; build(); }, retry: () => build() });
     } else {
       ctx.result({ win: false, title: 'Out of space', sub: 'The belt filled up with carts that had nothing to collect.', next: () => build() });
@@ -250,12 +252,12 @@ export async function create(ctx) {
     // Test hooks: speed, state, and where a grid cell is on screen (so tests click the canvas like a player).
     test: {
       set speed(v) { speed = v; },
-      get state() { return { level: LEVELS[lvl], over: G.over, result: G.result, progress: G.progress, onBelt: G.belt.occupiedSpots, auto }; },
+      get state() { return { total: LEVELS.length, level: LEVELS[lvl], over: G.over, result: G.result, progress: G.progress, onBelt: G.belt.occupiedSpots, auto }; },
       carts: () => G.carts(),
       nextMove() { if (!G.belt.hasFreeSpot) return null; const c = chooseFor(G.carts().filter(c => c.available)); return c ? this.screenOf(c.x, c.y) : null; },
       screenOf(x, y) { const v = cellPos(x, y).project(camera), r = ctx.canvas.getBoundingClientRect(); return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; },
     },
-    destroy() { ctx.canvas.removeEventListener('pointerdown', onPointer); disposeScene(scene); },
+    destroy() { dead = true; ctx.canvas.removeEventListener('pointerdown', onPointer); disposeScene(scene); },
   };
 }
 

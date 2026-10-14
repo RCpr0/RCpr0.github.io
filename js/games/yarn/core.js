@@ -1,7 +1,7 @@
 // Yarn Collect, playable in the browser. Rules ported from the shipped C#: Container.CanAccept / CanEventuallyAccept,
 // DispenseCount, SplineSpot.CheckNearbyContainer and Game.IsBoardDeadlocked. The road is the game's open cubic Bezier
 // through the waypoints (tangent = waypoint heading x 1.1), closed when the first and last waypoints meet.
-export const CAPACITY = 8, SLOT_SPACING = 1.95, DETECT = 3, LOOK_AHEAD = 0.5, BEHIND = 0.03;
+export const CAPACITY = 8, SLOT_SPACING = 1.95, DETECT = 3, LOOK_AHEAD = 0.5, BEHIND = 0.03, PREV_RESET = 2;
 export const BASKET = { w: 2.95, h: 5.25, tip: 1.5 };
 const TAN = 1.1;
 
@@ -75,14 +75,16 @@ export class YarnGame {
   topRun(b) { let n = 0; const t = this.top(b); for (let i = b.balls.length - 1; i >= 0 && b.balls[i] === t; i--) n++; return n; }
 
   hasAvailable(color) { return this.baskets.some(x => x.balls.length < CAPACITY && x.balls.length > 0 && this.top(x) === color); }
+  // A ball can't drop straight back into the basket it left; the shipped Car forgets that basket 2 s after leaving.
+  isPrev(b, ball) { return b === ball.prev && !(ball.prevUntil <= this.time); }
   canAccept(b, ball) {
-    if (b.balls.length >= CAPACITY || b === ball.prev) return false;
+    if (b.balls.length >= CAPACITY || this.isPrev(b, ball)) return false;
     const cleanHome = this.baskets.some(x => x.balls.length < CAPACITY && x.balls.length > 0 && x.balls.every(c => c === ball.color));
     if (cleanHome && b.balls.some(c => c !== ball.color)) return false;
     const match = this.top(b) === ball.color, noAlt = !this.hasAvailable(ball.color) && b.balls.length === 0;
     return match || noAlt;
   }
-  canEventuallyAccept(b, ball) { return b.balls.length < CAPACITY && b !== ball.prev && (b.balls.length === 0 || this.top(b) === ball.color); }
+  canEventuallyAccept(b, ball) { return b.balls.length < CAPACITY && !this.isPrev(b, ball) && (b.balls.length === 0 || this.top(b) === ball.color); }
 
   // Tap a basket: its top run of one colour goes onto free road slots behind the slot passing its mouth.
   tap(i) {
@@ -96,7 +98,7 @@ export class YarnGame {
     const sent = [];
     for (let s = lead, steps = 0; sent.length < k && steps < n; s = (s - 1 + n) % n, steps++) {
       if (this.slots[s]) continue;
-      const ball = { color: b.balls.pop(), prev: b, arrive: this.time + 0.2 + sent.length * 0.15, from: b, id: Math.random() };
+      const ball = { color: b.balls.pop(), prev: b, prevUntil: this.time + PREV_RESET, arrive: this.time + 0.2 + sent.length * 0.15, from: b, id: Math.random() };
       this.slots[s] = ball; ball.slot = s; sent.push(ball);
     }
     b.busyUntil = this.time + 0.2 + sent.length * 0.15;
@@ -138,9 +140,6 @@ export class YarnGame {
   checkEnd() {
     if (this.over) return;
     if (this.onRoad() === 0 && this.baskets.every(b => b.balls.length === 0 || b.complete)) { this.result = 'win'; return; }
-    // Stuck: nothing on the road can ever land, and no basket has anything left to send.
-    const tappable = this.baskets.some(b => !b.complete && b.balls.length);
-    if (!tappable && this.slots.some(Boolean) && !this.slots.some(ball => ball && this.baskets.some(b => this.canEventuallyAccept(b, ball)))) { this.result = 'lose'; return; }
     if (this.onRoad() < this.usable) return;
     if (this.baskets.some(b => b.balls.length === 0)) return;
     for (const ball of this.slots) if (ball && this.baskets.some(b => this.canEventuallyAccept(b, ball))) return;
@@ -163,7 +162,7 @@ export class YarnGame {
 function choose(g) {
   let best = -1, score = -Infinity;
   g.baskets.forEach((b, i) => {
-    if (b.complete || !b.balls.length || g.time < b.busyUntil) return;
+    if (b.complete || !b.balls.length || g.time < b.busyUntil || lastOpen(g, b)) return;
     const c = g.top(b), run = g.topRun(b), probe = { color: c, prev: b };
     if (g.usable - g.onRoad() < run) return;
     for (const d of g.baskets) {
@@ -176,11 +175,13 @@ function choose(g) {
   });
   return best;
 }
+// Never empty out the last unfinished basket: whatever it sends could only ever come back to it, and it can't.
+function lastOpen(g, b) { return g.baskets.every(o => o === b || o.complete); }
 function parkMove(g) {
   const wanted = new Set(g.slots.filter(Boolean).map(x => x.color));
   let best = -1, score = -Infinity;
   g.baskets.forEach((b, i) => {
-    if (b.complete || !b.balls.length || g.time < b.busyUntil) return;
+    if (b.complete || !b.balls.length || g.time < b.busyUntil || lastOpen(g, b)) return;
     const run = g.topRun(b); if (g.usable - g.onRoad() < run) return;
     if (run === b.balls.length) return; // a one-colour basket is a home, not something to clear
     const under = b.balls.length > run ? b.balls[b.balls.length - run - 1] : null;

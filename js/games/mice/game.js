@@ -10,6 +10,7 @@ const PALETTE = ['#EB3B3B', '#458CF2', '#22B14C', '#FFF200', '#6F3198', '#FF7E00
 const PW = 9.6, PITCH = 56 * Math.PI / 180, SLOT_GAP = 1.9, HCELL = 1.75;
 
 export async function create(ctx) {
+  let dead = false;
   const { THREE } = ctx;
   const levels = await Promise.all(LEVELS.map(n => fetch(`${ctx.base}level${n}.json`).then(r => r.json())));
   const scene = new THREE.Scene(); scene.background = new THREE.Color('#f6e7cf');
@@ -76,7 +77,7 @@ export async function create(ctx) {
         const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: label(hs.value), depthTest: false })); sp.scale.set(1.1, 1.1, 1); sp.position.y = 1.9; sp.renderOrder = 5; g.add(sp); g.userData.label = sp;
       }
       g.position.copy(housePos(hs.row, hs.col)); g.userData = { ...g.userData, box, hs, value: hs.value };
-      const hit = new THREE.Mesh(new THREE.BoxGeometry(HCELL, 2, HCELL), new THREE.MeshBasicMaterial({ visible: false })); hit.position.y = 1; hit.userData.house = hs; g.add(hit);
+      const hit = new THREE.Mesh(new THREE.BoxGeometry(HCELL, 1.1, HCELL), new THREE.MeshBasicMaterial({ visible: false })); hit.position.y = 0.55; hit.userData.house = hs; g.add(hit);
       root.add(g); houses.set(hs, g);
     }
     mice = new Map();
@@ -116,7 +117,9 @@ export async function create(ctx) {
     const r = ctx.canvas.getBoundingClientRect();
     ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camera);
     const hits = ray.intersectObjects([...houses.values()].map(g => g.children.at(-1)));
-    if (hits[0]) tap(hits[0].object.userData.house);
+    // Tilted camera: a tap can graze the house in front too. Prefer the one that can actually move.
+    const pick = hits.find(h => G.movable(h.object.userData.house)) || hits[0];
+    if (pick) tap(pick.object.userData.house);
   }
   ctx.canvas.addEventListener('pointerdown', onPointer);
   function tap(hs) {
@@ -161,13 +164,14 @@ export async function create(ctx) {
       m.position.copy(p); m.position.y = Math.abs(Math.sin(t * 18)) * 0.06; m.rotation.y = Math.atan2(dir.x, dir.z);
     }
     tweens.update(dt * k);
-    if (G.over && !endTimer) { endTimer = 1; setTimeout(() => finish(G.result), G.result === 'win' ? 700 : 400); }
+    if (G.over && !endTimer) { endTimer = 1; const g0 = G; setTimeout(() => { if (G === g0) finish(g0.result); }, G.result === 'win' ? 700 : 400); } // a restart in between makes this timer stale
   }
   function finish(res) {
+    if (dead) return;
     if (auto) { lvl = res === 'win' ? (lvl + 1) % LEVELS.length : lvl; build(); return; }
     if (res === 'win') {
       const last = lvl === LEVELS.length - 1;
-      ctx.result({ win: true, title: last ? 'All clear!' : 'Level complete', sub: last ? 'Three shipped levels. 47 more in the store, all built solo.' : `Mice Flow · level ${LEVELS[lvl]}`, next: () => { lvl = (lvl + 1) % LEVELS.length; build(); }, retry: () => build() });
+      ctx.result({ win: true, last, title: last ? 'All clear!' : 'Level complete', sub: last ? 'Three shipped levels. 47 more in the store, all built solo.' : `Mice Flow · level ${LEVELS[lvl]}`, next: () => { lvl = (lvl + 1) % LEVELS.length; build(); }, retry: () => build() });
     } else ctx.result({ win: false, title: 'Out of space', sub: 'The tray filled with houses whose colours were still buried.', next: () => build() });
   }
 
@@ -180,9 +184,9 @@ export async function create(ctx) {
     restart() { auto = false; fast = false; speed = 1; speedBtn.classList.remove('on'); lvl = 0; build(); },
     test: {
       set speed(v) { speed = v; },
-      get state() { return { level: lvl + 1, over: G.over, result: G.result, progress: G.blocks.filter(b => b.gone).length / G.blocks.length, onBelt: G.parked().length + G.mice.length, auto }; },
+      get state() { return { total: LEVELS.length, level: lvl + 1, over: G.over, result: G.result, progress: G.blocks.filter(b => b.gone).length / G.blocks.length, onBelt: G.parked().length + G.mice.length, auto }; },
       nextMove() { const h = G.botChoice(); if (!h || G.time - G.lastTap < 0.4) return null; const v = houses.get(h).position.clone().setY(0.6).project(camera), r = ctx.canvas.getBoundingClientRect(); return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; },
     },
-    destroy() { ctx.canvas.removeEventListener('pointerdown', onPointer); speedBtn.remove(); disposeScene(scene); },
+    destroy() { dead = true; ctx.canvas.removeEventListener('pointerdown', onPointer); speedBtn.remove(); disposeScene(scene); },
   };
 }
