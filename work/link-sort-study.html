@@ -49,6 +49,22 @@
   <p style="margin-top:26px"><a class="btn" href="https://drive.google.com/file/d/1_1TzYHRQWPR6QpBPdaCUb4UfTJjZ8NAS/view" target="_blank" rel="noopener">Read the full report (PDF) ↗</a></p>
 </div></header>
 
+<section class="sec" style="padding-bottom:0"><div class="wrap">
+  <div class="step reveal">
+    <div>
+      <div class="mono">The game</div>
+      <h2>A sort puzzle with a generous move rule</h2>
+      <p>Link Sort is a colour-sort puzzle: drag stacks between columns until every column holds one colour. Its tutorial teaches the basics in three levels, and the third introduces the rule that set it apart from its genre: <strong>you can move several colours in one go</strong>.</p>
+      <p>Later levels add covers that hide pieces and a swap booster. That generous rule turned out to be the centre of the whole study.</p>
+    </div>
+    <div class="phone-row">
+      <div class="ph"><img src="../media/linksort/l01-drag.webp" alt="Link Sort level 1 tutorial: drag and drop to sort" loading="lazy"></div>
+      <div class="ph"><img src="../media/linksort/l02-column.webp" alt="Link Sort level 2 tutorial: drop to sort the column" loading="lazy"></div>
+      <div class="ph"><img src="../media/linksort/l03-multi.webp" alt="Link Sort level 3 tutorial: move multiple colours at the same time" loading="lazy"></div>
+    </div>
+  </div>
+</div></section>
+
 <section class="sec"><div class="wrap">
   <div class="prose reveal">
     <div class="mono">Finding 1 · The rule, not the levels</div>
@@ -76,6 +92,16 @@
     <div class="stat"><b>~½</b><span>Of the variation in fail rate from level 5 onward is explained by colour scatter</span></div>
     <div class="stat"><b>2×</b><span>Churn on levels that introduce a new colour: 15.0% vs 7.5%</span></div>
     <div class="stat"><b>L1–4</b><span>Provably unlosable, yet reporting fail rates, so the funnel was mismeasured</span></div>
+  </div>
+  <div class="step reveal" style="margin-top:30px">
+    <div>
+      <h3>What scatter looks like</h3>
+      <p>Level 4 deals each colour in tidy runs. By level 14, colours are split across many columns and half-hidden under covers, so the player has to undo the scatter before any column can be finished. From level 5 on, scatter alone explained about half the variation in fail rate.</p>
+    </div>
+    <div class="phone-row">
+      <div class="ph" style="width:min(46%,210px)"><img src="../media/linksort/l04.webp" alt="Link Sort level 4: colours dealt in tidy runs" loading="lazy"></div>
+      <div class="ph" style="width:min(46%,210px)"><img src="../media/linksort/l14.webp" alt="Link Sort level 14: colours scattered across columns under covers" loading="lazy"></div>
+    </div>
   </div>
   <div class="prose reveal" style="margin-top:26px">
     <p>The solver proved levels 1–4 couldn't be lost, so the "failures" reported on them were tracking something else. That one finding means the early funnel needs re-instrumenting before its numbers can be trusted.</p>

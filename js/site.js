@@ -1,22 +1,24 @@
 document.documentElement.classList.add('js');
-// Prototype videos play on hover (desktop) or tap (touch); scroll reveals; sticky-nav border.
+// Videos autoplay (muted, looping) while on screen and pause off screen; tap/Enter toggles; scroll reveals; sticky-nav border.
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+const seen = 'IntersectionObserver' in window && !reduce
+  ? new IntersectionObserver(es => es.forEach(e => e.target._auto(e.isIntersecting)), { threshold: 0.35 })
+  : null;
 document.querySelectorAll('[data-video]').forEach(el => {
   const v = el.querySelector('video');
   if (!v) return;
+  let held = false; // the viewer paused it, so scrolling back doesn't restart it
   const play = () => { el.classList.add('playing'); v.play().catch(() => {}); };
   const stop = () => { el.classList.remove('playing'); v.pause(); };
-  // Hover only for real mice; a touch tap also emits compatibility mouse events, which would otherwise play-then-pause.
-  if (!reduce) {
-    el.addEventListener('pointerenter', e => e.pointerType === 'mouse' && play());
-    el.addEventListener('pointerleave', e => e.pointerType === 'mouse' && stop());
-  }
-  el.addEventListener('click', () => (v.paused ? play() : stop()));
+  const toggle = () => { if (v.paused) { held = false; play(); } else { held = true; stop(); } };
+  el._auto = inView => (inView ? !held && play() : stop());
+  el.addEventListener('click', toggle);
   // Keyboard access: the tile acts as a play/pause button.
   el.tabIndex = 0; el.setAttribute('role', 'button');
-  if (!el.hasAttribute('aria-label')) el.setAttribute('aria-label', 'Play or pause video: ' + (el.querySelector('img')?.alt || 'gameplay clip'));
-  el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); v.paused ? play() : stop(); } });
+  if (!el.hasAttribute('aria-label')) el.setAttribute('aria-label', 'Play or pause video: ' + (el.querySelector('img')?.alt || v.getAttribute('aria-label') || 'gameplay clip'));
+  el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
+  if (seen) seen.observe(el);
 });
 
 const nav = document.querySelector('.nav');
