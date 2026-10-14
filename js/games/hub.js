@@ -5,6 +5,7 @@ import * as THREE from 'three';
 const GAMES = [
   { id: 'sandflow', name: 'Sand Flow', icon: 'media/store/icon-sandflow.webp', how: 'Tap a cart with a clear path. It rides the belt and collects its colour.' },
   { id: 'yarn', name: 'Yarn Collect', icon: 'media/store/icon-yarncollect.webp', how: 'Tap a basket to send its top yarn onto the road. Yarn drops into a basket showing its colour.' },
+  { id: 'kitty', name: 'KittyDoku', icon: 'media/store/icon-kittydoku.webp', how: 'Pick a cat in the tray, then tap a square. One cat per colour, no two touching, and no cat may see another.' },
 ];
 
 const root = document.getElementById('arcade');

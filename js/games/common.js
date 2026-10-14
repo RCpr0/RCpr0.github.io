@@ -8,9 +8,11 @@ export async function loadModel(url) {
   const j = await (await fetch(url)).json();
   const parts = j.parts.filter(p => p.count > 0).map(p => {
     const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.BufferAttribute(dec(p.pos, Float32Array), 3));
-    if (p.nrm) g.setAttribute('normal', new THREE.BufferAttribute(dec(p.nrm, Float32Array), 3));
-    if (p.uv) g.setAttribute('uv', new THREE.BufferAttribute(dec(p.uv, Float32Array), 2));
+    // Quantised parts: 16-bit positions/UVs over each part's own range, 8-bit normals (see tools/games/fbx2json.mjs).
+    const unq = (b64, mn, sc, k) => Float32Array.from(dec(b64, Uint16Array), (v, i) => mn[i % k] + v * sc[i % k]);
+    g.setAttribute('position', new THREE.BufferAttribute(p.q ? unq(p.pos, p.pmin, p.pscale, 3) : dec(p.pos, Float32Array), 3));
+    if (p.nrm) g.setAttribute('normal', new THREE.BufferAttribute(p.q ? Float32Array.from(dec(p.nrm, Int8Array), v => v / 127) : dec(p.nrm, Float32Array), 3));
+    if (p.uv) g.setAttribute('uv', new THREE.BufferAttribute(p.q ? unq(p.uv, p.umin, p.uscale, 2) : dec(p.uv, Float32Array), 2));
     g.setIndex(new THREE.BufferAttribute(dec(p.idx, p.i32 ? Uint32Array : Uint16Array), 1));
     if (!p.nrm) g.computeVertexNormals();
     return { name: p.name, mat: p.mat, geometry: g };

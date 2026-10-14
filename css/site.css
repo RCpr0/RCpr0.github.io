@@ -299,3 +299,10 @@ footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wr
 .arcade-count { position: absolute; left: 50%; top: 40px; transform: translateX(-50%); pointer-events: none !important; background: #fff; color: #4a62c9; font-size: 15px;
   padding: 4px 14px; border-radius: 10px; border: 2px solid #8fb0ff; box-shadow: 0 3px 0 #8fb0ff; }
 .arcade-count:empty { display: none; }
+.arcade-lives { position: absolute; right: 10px; top: 10px; display: flex; align-items: center; gap: 2px; pointer-events: none !important; background: #fff8ef; border-radius: 12px; padding: 4px 10px; box-shadow: 0 3px 0 #e2b77d; }
+.arcade-lives i { font-style: normal; font-size: 16px; color: #d8cfc6; } .arcade-lives i.on { color: #ff4d6d; }
+.arcade-lives b { margin-left: 8px; font: 400 13px/1 'Russo One', var(--display); color: #8a5a2b; }
+.arcade-teach { position: absolute; left: 12px; right: 12px; top: 44px; text-align: center; pointer-events: none !important; font: 600 12px/1.35 var(--body); color: #6b4a2b; background: #fff8efe6; border-radius: 10px; padding: 6px 10px; }
+.arcade-teach:empty { display: none; }
+.arcade-hint { position: absolute; left: 10px; bottom: 10px; min-height: 44px; border: 0; border-radius: 14px; padding: 0 14px; background: #fff8ef; color: #8a5a2b; font: 400 14px/1 'Russo One', var(--display); box-shadow: 0 3px 0 #e2b77d; cursor: pointer; }
+.attract .arcade-hint { display: none; }
