@@ -5,7 +5,7 @@ import { SandFlowGame, DT } from './core.js';
 import { PALETTE } from './sim/palette.js';
 import { COLORS } from './colors.js';
 import { chooseEager } from './policy.js';
-import { loadModel, loadTexture, tweenList, easeOutBack, easeInOut, easeOutCubic, disposeScene, gloss, matte, addRig, castShadows, fitPerspective, hoverSprings } from '../common.js';
+import { loadModel, loadTexture, tweenList, easeOutBack, easeInOut, easeOutCubic, disposeScene, gloss, matte, addRig, castShadows, fitPerspective, hoverSprings, onTap } from '../common.js';
 import { RoundedBoxGeometry } from '../../vendor/RoundedBoxGeometry.js';
 
 // Shipped levels: mystery carts, generators, wooden crates, keys + locks (with crates), and all of them together.
@@ -298,10 +298,9 @@ export async function create(ctx) {
     const c = cellAt(e), v = c && [...views.values()].find(v => v.x === c.x && v.y === c.y && v.available);
     hov.set(v ? v.g : null);
   }
-  ctx.canvas.addEventListener('pointerdown', onPointer);
+  onTap(ctx.el, onPointer);
   const hov = hoverSprings(), leave = () => hov.set(null);
   ctx.el.addEventListener('pointermove', onHover); ctx.el.addEventListener('pointerleave', leave);
-  ctx.canvas.style.touchAction = 'none';
 
   function tap(x, y) {
     const v = [...views.values()].find(v => v.x === x && v.y === y);
@@ -394,7 +393,7 @@ export async function create(ctx) {
     if (G.over) { if (!ending) gameOver(); ending += dt; const wait = G.result === 'win' ? 0.9 : 1.5; if (!endShown && ending >= wait) { endShown = true; finish(G.result); } }
   }
   // Attract-mode bot: the dashboard's eager rule (colour with most sand in reach, then nearest the belt), a cart every third of a second.
-  function autoStep() { if (!G.belt.hasFreeSpot || G.ticks % 20 !== 0) return; const c = chooseEager(G.grid.getAvailableBuckets(), G.sand); if (c) tap(c.index.x, c.index.y); }
+  function autoStep() { if (!G.belt.hasFreeSpot || G.ticks % 20 !== 0) return; const c = chooseEager(G.grid.getAvailableBuckets(), G.sand); if (c) { ctx.botMove?.(api.test.screenOf(c.index.x, c.index.y)); tap(c.index.x, c.index.y); } }
 
   // A full cart rises, pops into confetti (shipped: rise 0.5, scale to 0, BucketConfetti) and the praise climbs with the combo.
   function bucketFull(b) {
@@ -438,7 +437,7 @@ export async function create(ctx) {
     if (auto) { lvl = res === 'win' ? (lvl + 1) % LEVELS.length : lvl; build(); return; }
     if (res === 'win') {
       const last = lvl === LEVELS.length - 1;
-      ctx.result({ win: true, last, title: last ? 'All clear!' : 'Level complete', sub: last ? `${LEVELS.length} shipped levels cleared. Hundreds more in the store.` : `Sand Flow · level ${LEVELS[lvl]}`,
+      ctx.result({ win: true, last, title: last ? 'All clear!' : 'Level complete', sub: last ? `${LEVELS.length} shipped levels cleared. Hundreds more in the store.` : 'Every cart filled, every grain collected.',
         next: () => { lvl = (lvl + 1) % LEVELS.length; build(); }, retry: () => build() });
     } else {
       ctx.result({ win: false, title: G.belt.occupiedSpots ? 'Out of space' : 'Stuck', sub: G.belt.occupiedSpots ? 'The belt filled up with carts that had nothing to collect.' : 'No cart left can reach the belt.', next: () => build() });
@@ -446,7 +445,7 @@ export async function create(ctx) {
   }
 
   build();
-  return {
+  const api = {
     scene, camera, update,
     resize: () => fit(),
     autoplay(on) { auto = on; speed = on ? 1.5 : 1; },
@@ -469,6 +468,7 @@ export async function create(ctx) {
     },
     destroy() { dead = true; ctx.canvas.removeEventListener('pointerdown', onPointer); ctx.el.removeEventListener('pointermove', onHover); ctx.el.removeEventListener('pointerleave', leave); hud.destroy(); disposeScene(scene); },
   };
+  return api;
 }
 
 const easeBackIn = x => 2.70158 * x * x * x - 1.70158 * x * x;

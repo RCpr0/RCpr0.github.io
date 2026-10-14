@@ -144,3 +144,17 @@ export function hoverSprings() {
     clear() { for (const o of live.keys()) if (o.userData.baseScale) o.scale.copy(o.userData.baseScale); live.clear(); current = null; },
   };
 }
+
+// Taps that never fight page scrolling: fn(e) runs on pointerup when the pointer moved less than 10 px and the
+// browser didn't take the gesture for a scroll (pointercancel). Mouse clicks behave the same way.
+export function onTap(el, fn) {
+  let down = null;
+  el.addEventListener('pointerdown', e => { if (e.button > 0) return; down = { id: e.pointerId, x: e.clientX, y: e.clientY }; });
+  el.addEventListener('pointercancel', () => { down = null; });
+  el.addEventListener('pointerup', e => {
+    const d = down; down = null;
+    if (!d || d.id !== e.pointerId || Math.hypot(e.clientX - d.x, e.clientY - d.y) > 10) return;
+    if (e.target.closest?.('button, .arcade-card')) return; // the stage's own buttons keep their clicks
+    fn(e);
+  });
+}

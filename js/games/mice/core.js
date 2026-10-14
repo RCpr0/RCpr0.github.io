@@ -3,9 +3,10 @@
 // mice take the first exposed block in spawn order; FindPathToBlock walks the exterior cells to the grid edge), AntBox
 // (one mouse per BoxSpawnRate while its colour is exposed; an emptied house frees its tray slot), Ant (door -> rim loop
 // -> grid path -> pick up -> back the same way -> away to the side, as the shipped MouseSideExit does) and LevelFlow
-// (win when the picture is gone and no mouse is out). The shipped mice leave across the phone screen's left/right edge;
-// the web board floats on the page with no screen edge beside it, so each side of the board has a burrow instead and
-// the mouse dives into it (the shipped MousePresentation dive). Mice still pick their side the MouseSideExit way.
+// (win when the picture is gone and no mouse is out). Mechanics port the production branch's MechanicFactory (Mystery, Wood,
+// Tunnel, Wall) and MouseHouseSpawner's level-tail boost (MouseConfig.Boost = 5 once BoxGridRules.AnyPlayLeft is false).
+// The shipped mice leave across the phone screen's left/right edge; the web board floats on the page with no screen edge
+// beside it, so each side of the board has a burrow instead and the mouse dives into it (the shipped MousePresentation dive). Mice still pick their side the MouseSideExit way.
 //
 // Units: the web world is the shipped Unity world scaled by K = 0.1, so every shipped speed and size carries over
 // (MouseMotion.asset: Speed 20, SplineSpeed 30, BaseMultiplier 1.3, WaitAtTarget .55, PickupDuration .36,
@@ -19,6 +20,8 @@ export const JUMP = 0.25 / MULT;            // house hop to the tray: 0.19 s
 export const SPEED = 20 * MULT * K;         // 2.6 web units/s on the grid, curves and doorway
 export const RIM_SPEED = 30 * MULT * K;     // 3.9 web units/s along the rim loop (the shipped spline)
 export const SLOT_GAP = 23.6 * K, TRAY_Z = 2.6, HOUSE_Z = TRAY_Z + 3.7, HOUSE_DX = 21.8 * K, HOUSE_DZ = 20.5 * K;
+export const THROWN = 0.08 + 0.29 + 0.14; // TunnelView release: delay, slide, settle (unscaled DOTween seconds)
+export const BOT_GAP = 0.45;                // the bot's pause between taps (a quick but human tap rhythm)
 export const DOOR = 7.45 * K;               // the doorway sits this far in front of the house centre (toward the camera)
 
 // Cell size: the mosaic is at most 89% of the 140.6-unit safe width and its projected height at most 81% of it
@@ -34,8 +37,13 @@ export class MiceGame {
     this.c = cellOf(this.w, this.h);
     this.grid = Array.from({ length: this.w * this.h }, () => null);
     this.blocks = level.cells.map(([x, y, color], order) => { const b = { x, y, color, order, gone: false, reserved: false, lifted: false }; this.grid[y * this.w + x] = b; return b; });
-    this.houses = level.boxes.map(([row, col, color, value, mech]) => ({ row, col, color, value, wall: mech === 4, slot: -1, timer: 0, ready: 0, done: false }));
-    this.tray = Array(TRAY).fill(null); this.mice = []; this.time = 0; this.result = null; this.events = []; this.lastTap = -9;
+    // Boxes: [row, col, colour, value, mechanic, mechanicValue, dir, tunnel] (tools/games/export_mice.py). Mechanics port
+    // MechanicFactory: 1 Mystery (a "?" cover until the house first becomes movable), 2 Wood (crated until N other houses
+    // have reached the tray), 3 Tunnel (a fixture that throws its next house into the cell it faces whenever that cell
+    // is empty), 4 Wall (a permanent blocker).
+    this.houses = level.boxes.map(b => this.makeHouse(...b));
+    this.tray = Array(TRAY).fill(null); this.mice = []; this.time = 0; this.result = null; this.events = []; this.lastTap = -9; this.moves = 0;
+    this.boost = 1; // MouseConfig.Boost: 5 (SuperFastScale) once the house grid has no play left, the shipped level tail
     this.rand = rng(level.w * 7919 + level.h * 104729 + level.cells.length);
     // Rim loop: a rounded rectangle just outside the picture (the shipped closed spline around the mosaic).
     const R = 0.8 * this.c + 0.5;
@@ -43,7 +51,37 @@ export class MiceGame {
     // Burrows either side of the picture, level with its middle.
     this.burrowX = this.rim.x1 + 1.6; this.burrowZ = -this.h * this.c / 2;
     this.flood();
+    this.boardChanged(true);
+    this.events.length = 0; // the opening throws and reveals are the level's starting layout, not news
+    this.plan = level.plan ? level.plan.slice() : null; this.planWait = 0;
   }
+  makeHouse(row, col, color, value, mech = 0, mv = 0, dir = 0, tunnel = []) {
+    return { row, col, color, value, mech, wall: mech === 4, mystery: mech === 1, wood: mech === 2 ? Math.max(0, mv) : 0,
+      tunnel: mech === 3 ? { dir, list: tunnel, thrown: 0 } : null, slot: -1, timer: 0, ready: 0, landed: false, done: false, armed: 0 };
+  }
+  // Fixtures never leave their cell; a crated house can't be tapped. (MechanicFactory: CanPlay false.)
+  fixed(h) { return h.wall || !!h.tunnel; }
+  playable(h) { return !this.fixed(h) && h.wood <= 0; }
+  // BoxGrid.Changed: tunnels refill the cell they face (TunnelMechanic.TryThrow); every house whose movability flipped
+  // on reveals its "?" (MysteryMechanic.OnMovableChanged). A throw is itself a change, so loop until it settles.
+  boardChanged(init = false) {
+    for (let again = true; again;) {
+      again = false;
+      for (const t of this.houses) {
+        const sp = t.tunnel; if (!sp || t.done || sp.thrown >= sp.list.length) continue;
+        const r = t.row + (sp.dir === 0 ? -1 : sp.dir === 1 ? 1 : 0), c = t.col + (sp.dir === 2 ? -1 : sp.dir === 3 ? 1 : 0);
+        if (r < 0 || c < 0 || r >= this.rows || c >= this.cols || this.occupied(r, c)) continue;
+        const [color, value] = sp.list[sp.thrown++], h = this.makeHouse(r, c, color, value);
+        // TunnelView: the house is in its cell at once but untappable while it slides out (.08 + .29 s) and settles (.14 s).
+        if (!init) h.armed = this.time + THROWN;
+        this.houses.push(h); again = true;
+        this.events.push({ type: 'throw', tunnel: t, house: h, init });
+      }
+    }
+    for (const h of this.houses) if (h.mystery && h.slot < 0 && !h.done && this.movable(h)) { h.mystery = false; this.events.push({ type: 'reveal', house: h, init }); }
+  }
+  // BoxGridRules.AnyPlayLeft: does the house grid still owe the player a tap? Walls and spent tunnels don't.
+  anyPlayLeft() { return this.houses.some(h => h.slot < 0 && !h.done && !h.wall && (!h.tunnel || h.tunnel.thrown < h.tunnel.list.length)); }
   get over() { return this.result !== null; }
   cell(x, y) { return x < 0 || y < 0 || x >= this.w || y >= this.h ? undefined : this.grid[y * this.w + x]; }
   // Empty cells reachable from the rim, 4-way, through empty cells.
@@ -76,7 +114,7 @@ export class MiceGame {
   // House grid: row 0 opens onto the tray. Distances from empty top-row cells through empty cells.
   occupied(r, c) { return this.houses.some(h => h.row === r && h.col === c && h.slot < 0 && !h.done); }
   movable(h) {
-    if (h.wall || h.slot >= 0 || h.done) return false;
+    if (!this.playable(h) || h.slot >= 0 || h.done) return false;
     if (h.row === 0) return true;
     const seen = new Set(), q = [];
     for (let c = 0; c < this.cols; c++) if (!this.occupied(0, c)) { seen.add(c); q.push([0, c]); }
@@ -84,11 +122,15 @@ export class MiceGame {
     return [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dr, dc]) => seen.has((h.row + dr) * 64 + (h.col + dc)) && h.row + dr >= 0 && h.col + dc >= 0 && h.col + dc < this.cols && h.row + dr < this.rows);
   }
   parked() { return this.tray.filter(Boolean); }
+  tappable(h) { return this.movable(h) && this.time >= h.armed; }
+  key(h) { return `${h.row},${h.col},${h.color}`; }
   tap(h) {
-    if (this.over || !this.movable(h)) return { ok: false, why: 'blocked' };
+    if (this.over || !this.tappable(h)) return { ok: false, why: 'blocked' };
     const s = this.tray.indexOf(null); if (s < 0) return { ok: false, why: 'tray full' };
-    this.tray[s] = h; h.slot = s; h.timer = 0; h.ready = this.time + JUMP; this.lastTap = this.time;
+    if (this.plan) { if (this.plan[0] === this.key(h)) { this.plan.shift(); this.planWait = 0; } else this.plan = null; } // off script: greedy from here
+    this.tray[s] = h; h.slot = s; h.timer = 0; h.ready = this.time + JUMP; this.lastTap = this.time; this.moves++; this.lastKey = this.key(h);
     this.events.push({ type: 'park', house: h, slot: s });
+    this.boardChanged();
     return { ok: true, slot: s };
   }
 
@@ -168,7 +210,14 @@ export class MiceGame {
 
   step(dt) {
     if (this.over) return;
-    this.time += dt;
+    this.time += dt; if (this.plan && this.tray.indexOf(null) >= 0) this.planWait += dt;
+    // ReachedTray: every landing ticks the wood crates down (WoodMechanic); the last play left boosts the tail 5x.
+    for (const h of this.parked()) if (!h.landed && this.time >= h.ready) {
+      h.landed = true; let opened = false;
+      for (const w of this.houses) if (w.wood > 0 && !w.done) { w.wood--; this.events.push({ type: 'wood', house: w, left: w.wood }); if (!w.wood) opened = true; }
+      if (opened) this.boardChanged();
+      if (!this.anyPlayLeft()) this.boost = 5;
+    }
     for (const h of this.parked()) {
       if (h.value <= 0 || this.time < h.ready) continue;
       const b = this.outermost(h.color); if (!b) continue;
@@ -187,8 +236,8 @@ export class MiceGame {
       if (m.picked && t >= m.tEnd) { m.home = true; this.events.push({ type: 'home', mouse: m }); }
     }
     this.mice = this.mice.filter(m => !m.home);
-    if (this.blocks.every(b => b.gone) && !this.mice.length) { this.result = 'win'; return; }
-    if (this.tray.every(Boolean) && !this.mice.length && !this.parked().some(h => h.value > 0 && this.outermost(h.color))) this.result = 'lose';
+    if (this.blocks.every(b => b.gone) && !this.mice.length) { this.result = 'win'; this.boost = 1; return; }
+    if (this.tray.every(Boolean) && !this.mice.length && !this.parked().some(h => h.value > 0 && this.outermost(h.color))) { this.result = 'lose'; this.boost = 1; }
   }
   // Where a mouse is t seconds into its outing: { p:[x,z], dir:[dx,dz], phase: 'out'|'wait'|'back' }.
   mouseAt(m, t) {
@@ -197,19 +246,42 @@ export class MiceGame {
     return { ...sample(m.back, t - m.tPick), phase: 'back' };
   }
 
-  // Bot for attract mode and tests: park a movable house whose colour is exposed now; prefer bigger houses.
-  botChoice() {
-    if (this.tray.indexOf(null) < 0) return null;
-    const exposedColors = new Set(this.blocks.filter(b => !b.gone && !b.reserved && this.exposed(b)).map(b => b.color));
-    const parkedColors = new Set(this.parked().map(h => h.color));
-    const cand = this.houses.filter(h => this.movable(h));
-    const score = h => (exposedColors.has(h.color) ? 100 : 0) - (parkedColors.has(h.color) ? 50 : 0) + h.value / 100 - h.row;
+  // Bot for attract mode, nextMove() and tests. Each level ships a recorded tap order (tools/games/mice-plan.mjs searched
+  // it offline against these same rules); while the game follows it the bot waits for the next house on the list. Once
+  // anyone taps off the list (a visitor took over), or the list stalls, it plays greedily: a movable house whose colour
+  // has the most exposed cheese per house of that colour already parked.
+  // eager: never "wait" — the best legal tap right now (what a visitor jumping in mid-level is offered), no side effects.
+  botChoice(eager = false) {
+    if (this.over || this.tray.indexOf(null) < 0) return null;
+    if (this.plan && this.plan.length) {
+      const h = this.houses.find(h => this.key(h) === this.plan[0] && h.slot < 0 && !h.done);
+      if (h && this.tappable(h)) return h;
+      if (!eager) { if (h && this.planWait < 3) return null; this.plan = null; }
+    }
+    const exp = new Map(), par = new Map();
+    for (const b of this.blocks) if (!b.gone && !b.reserved && this.exposed(b)) exp.set(b.color, (exp.get(b.color) || 0) + 1);
+    for (const h of this.parked()) par.set(h.color, (par.get(h.color) || 0) + 1);
+    const cand = this.houses.filter(h => this.tappable(h)); if (!cand.length) return null;
+    const score = h => (exp.get(h.color) || 0) / (1 + 4 * (par.get(h.color) || 0)) + h.value / 1000 - h.row * 0.01;
     cand.sort((a, b) => score(b) - score(a));
-    const best = cand[0]; if (!best) return null;
-    if (!exposedColors.has(best.color) && this.tray.filter(Boolean).length >= TRAY - 1) return null; // don't fill the last slot with a dud
+    const best = cand[0];
+    if (!eager && !exp.get(best.color) && this.parked().length >= TRAY - 1) return null; // don't fill the last slot with a dud
     return best;
   }
-  autoTap() { if (this.over || this.time - this.lastTap < 0.6) return; const h = this.botChoice(); if (h) this.tap(h); }
+  // The bot's next tap if it would tap now (cadence BOT_GAP), else null. step() advances planWait.
+  botReady() { return this.time - this.lastTap >= BOT_GAP ? this.botChoice() : null; }
+  autoTap() { const h = this.botReady(); if (h) this.tap(h); return h; }
+}
+
+// The bot playing a level on the page's clock, exactly as game.js steps it at 1x: 60 fixed steps per real second, each
+// real second worth MouseConfig.Multiplier's boost (5x for the shipped level tail). Returns real seconds taken.
+export function runBot(level, maxReal = 300, onStep) {
+  const g = new MiceGame(level); let real = 0, acc = 0; const h = 1 / 60;
+  while (!g.over && real < maxReal) {
+    real += h; acc += h * g.boost;
+    while (acc >= h - 1e-9 && !g.over) { acc -= h; g.autoTap(); g.step(h); if (onStep) onStep(g, real); }
+  }
+  return { g, real, result: g.result, moves: g.moves };
 }
 
 // ---- Path helpers ----

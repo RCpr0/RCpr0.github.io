@@ -83,3 +83,21 @@ if (y) y.textContent = String(new Date().getFullYear());
     if (seen.includes(f)) a.classList.add('cleared');
   });
 })();
+
+// Store phones: cycle through the store screenshots every few seconds while the phone is on screen.
+(() => {
+  document.querySelectorAll('[data-cycle]').forEach(ph => {
+    const imgs = [...ph.querySelectorAll('img')]; if (imgs.length < 2) return;
+    let i = 0, timer = null; imgs[0].classList.add('on');
+    const dot = document.createElement('i'); dot.className = 'dot'; ph.append(dot);
+    const step = () => {
+      const a = imgs[i]; i = (i + 1) % imgs.length; const b = imgs[i];
+      imgs.forEach(im => im.classList.remove('out'));
+      b.style.transition = 'none'; b.classList.remove('on'); void b.offsetWidth; b.style.transition = '';
+      a.classList.remove('on'); a.classList.add('out'); b.classList.add('on');
+      dot.style.transform = `translateX(${i * 14}px)`;
+    };
+    const run = on => { clearInterval(timer); timer = on ? setInterval(step, reduce ? 6000 : 3200) : null; };
+    if ('IntersectionObserver' in window) new IntersectionObserver(es => es.forEach(e => run(e.isIntersecting)), { threshold: 0.3 }).observe(ph);
+  });
+})();

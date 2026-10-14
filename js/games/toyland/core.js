@@ -896,3 +896,38 @@ export class Bot {
   // While the bot replays the witness the game must not dig for it (Unity holds the auto-dig during QA autoplay).
   get holdsAutoDig() { return this.onTrack; }
 }
+
+// =====================================================================================================================
+// Attract-mode pacing, shared by the browser and the pacing test so the test measures what ships. Each bot move is
+// announced (the ghost hand flies in, presses and drags) and lands BOT_CARRY seconds later; BOT_GAP seconds of quiet
+// separate one landing from the next announcement. Nothing starts while a merge waits for a dock spot (a column may
+// shift under the hand).
+// =====================================================================================================================
+export const BOT_GAP = 0.15, BOT_CARRY = 0.8;
+export class Pilot {
+  constructor(g, bot) { this.g = g; this.bot = bot; this.since = 0; this.carry = null; this.key = null; this.step = null; }
+  // The bot's next move for this board (cached, so the hand's pre-aim and the move it then plays are the same one).
+  plan() {
+    const g = this.g, key = `${g.moves}|${g.autoDigs}|${g.rescues}|${g.shooting.pending.length}|${g.shelves.key()}`;
+    if (key !== this.key) { this.key = key; this.step = g.over ? null : this.bot.next(); }
+    return this.step;
+  }
+  // One tick of attract play: { start } when a move should be announced, { land } when the carried move lands.
+  tick(busy) {
+    this.since += TICK;
+    if (this.carry) {
+      this.carry.t += TICK;
+      if (this.carry.t + 1e-9 < BOT_CARRY) return null;
+      const st = this.carry.st; this.carry = null; this.since = 0; return { land: st };
+    }
+    if (this.g.over || busy || this.since < BOT_GAP) return null;
+    const st = this.plan(); if (!st) return null;
+    this.carry = { st, t: 0 }; return { start: st };
+  }
+  cancel() { this.carry = null; this.since = 0; }
+  // The move is still the bot's plan for the board as it is now (the board can change under a carried toy).
+  stillValid(st) { this.key = null; const now = this.plan(); return !!now && now.from[0] === st.from[0] && now.from[1] === st.from[1] && now.to[0] === st.to[0] && now.to[1] === st.to[1] && !!now.swap === !!st.swap; }
+}
+// The shipped EndSpeedUp (ShooterConfig 2x): every character has merged and only shooting is left.
+export const END_SPEEDUP = 2;
+export const endPhase = g => !g.over && g.waiting.length === 0 && g.shelves.characterCount() === 0;

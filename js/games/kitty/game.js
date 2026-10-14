@@ -9,8 +9,9 @@
 import { RoundedBoxGeometry } from '../../vendor/RoundedBoxGeometry.js';
 import { GLTFLoader } from '../../vendor/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from '../../vendor/utils/SkeletonUtils.js';
-import { KittyGame, LEVELS } from './core.js';
-import { loadTexture, tweenList, easeOutBack, easeInOut, easeOutCubic, linear, disposeScene, gloss, matte, addRig, castShadows, fitPerspective, hoverSprings } from '../common.js';
+import { KittyGame, LEVELS, levelRules, introTime, thinkTime, demoRule, PACE, DEMO } from './core.js';
+import { createCards } from './cards.js';
+import { loadTexture, tweenList, easeOutBack, easeInOut, easeOutCubic, linear, disposeScene, gloss, matte, addRig, castShadows, fitPerspective, hoverSprings, onTap } from '../common.js';
 
 const REGION = ['#ff5a63', '#42ecf5', '#f8f06f', '#518bff', '#8fff51', '#6c94b4', '#fb84e3', '#e0aa36', '#be9df9', '#8bf693', '#fbacfa', '#54beef', '#53f68e', '#aaf8b1', '#fd6e74', '#f779c0'];
 const COATS = ['coat-snowcream.webp', 'coat-graytuxedo.webp', 'coat-chocolate.webp', 'coat-silvertabby.webp', 'coat-charcoalblack.webp'];
@@ -36,11 +37,11 @@ export async function create(ctx) {
   let dead = false;
   const { THREE, base } = ctx;
   const V3 = THREE.Vector3, gltfLoader = new GLTFLoader();
-  const [catG, dogG, mouseG, FACES, faceTex, dogTex, dogEyes, mouseTex, mouseFace, pawTex, bushTex, starTex, ringTex, coats, levels] = await Promise.all([
+  const [catG, dogG, mouseG, FACES, faceTex, dogTex, dogEyes, mouseTex, mouseFace, pawTex, bushTex, starTex, ringTex, puddleTex, sightTex, coats, levels] = await Promise.all([
     gltfLoader.loadAsync(base + 'cat.glb'), gltfLoader.loadAsync(base + 'dog.glb'), gltfLoader.loadAsync(base + 'mouse.glb'),
     fetch(base + 'faces.json').then(r => r.json()),
     loadTexture(base + 'cat-face.webp'), loadTexture(base + 'dog.webp'), loadTexture(base + 'dog-eyes.webp'), loadTexture(base + 'mouse.webp'), loadTexture(base + 'mouse-face.webp'),
-    loadTexture(base + 'paw.webp'), loadTexture(base + 'bush.webp'), loadTexture(base + 'sparkle-star.webp'), loadTexture(base + 'sparkle-ring.webp'),
+    loadTexture(base + 'paw.webp'), loadTexture(base + 'bush.webp'), loadTexture(base + 'sparkle-star.webp'), loadTexture(base + 'sparkle-ring.webp'), loadTexture(base + 'puddle.webp'), loadTexture(base + 'dog-sight.webp'),
     Promise.all(COATS.map(c => loadTexture(base + c))),
     Promise.all(LEVELS.map(n => fetch(`${base}level${n}.json`).then(r => r.json()))),
   ]);
@@ -75,7 +76,7 @@ export async function create(ctx) {
   const TYPES = {
     cat: type(catG, 0.86, 'sit', { eyeL: [0, 0.75, 0.25, 0.25], eyeR: [0, 0.75, 0.25, 0.25], mouth: [0, 0.25, 0.25, 0.25] }),
     dog: type(dogG, 0.95, 'idle', { eyeL: [0, 0, 1, 1], eyeR: [0, 0, 1, 1] }),
-    mouse: type(mouseG, 0.55, 'idle', { eyeL: [0, 0, 1, 1], eyeR: [0, 0, 1, 1], mouth: [0, 0, 1, 1] }),
+    mouse: type(mouseG, 0.7, 'idle', { eyeL: [0, 0, 1, 1], eyeR: [0, 0, 1, 1], mouth: [0, 0, 1, 1] }),
   };
   const chars = new Set();
   function makeChar(kind, coat = 0) {
@@ -131,6 +132,8 @@ export async function create(ctx) {
   // ---- Board pieces ----
   const tileGeo = new RoundedBoxGeometry(CELL - GAP, 0.32, CELL - GAP, 3, 0.12);
   const pawGeo = new THREE.PlaneGeometry(0.5, 0.5).rotateX(-Math.PI / 2);
+  const puddleGeo = new THREE.PlaneGeometry(CELL - GAP + 0.06, (CELL - GAP + 0.06) * 222 / 256).rotateX(-Math.PI / 2);
+  const sightGeo = new THREE.PlaneGeometry(0.62, 0.62 * 128 / 120).rotateX(-Math.PI / 2);
   const woodMat = matte('#f3d3a2', null, { roughness: 0.6 }), woodDark = matte('#e2b77d', null, { roughness: 0.65 });
   const red = new THREE.Color(CFG.wrongColor); const refuse = new THREE.Color('#9e1b2a');
   // CharacterShadow for the carried cat: a soft round shadow straight below it, so the target square reads at a glance.
@@ -138,14 +141,20 @@ export async function create(ctx) {
   const blob = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: blobTex, color: '#3d2a1e', transparent: true, opacity: 0, depthWrite: false }));
   blob.renderOrder = 2; scene.add(blob);
 
-  let G, lvl = 0, root, tiles, paws, boardCats, wrongCats, slots, auto = false, speed = 1, ended = false, hud, banner, hintBtn, carry = null, botT = 0, fx;
-  let lastLives = 3, dogs, mice;
+  let G, lvl = 0, root, tiles, paws, boardCats, wrongCats, slots, auto = false, speed = 1, ended = false, hud, cards, hintBtn, carry = null, fx;
+  let lastLives = 3, dogs, mice, moves = 0, rules = [];
+  // Attract bot: waits out the deal-in, then for each cat thinks, presses (ghost hand), lifts, carries and drops.
+  // Timings come from core.js (PACE), which the pacing test simulates. bot = { phase, t, think, demo, slipped, mv }.
+  let bot = null;
 
   function build() {
-    hov.clear(); tweens.clear(); ctx.hideResult(); ended = false; carry = null; botT = 0;
+    hov.clear(); tweens.clear(); ctx.hideResult(); ended = false; carry = null; moves = 0;
     for (const ch of [...chars]) dropChar(ch);
     if (root) { scene.remove(root); root.traverse(o => { if (o.userData.ownMat) o.material.dispose(); }); }
-    const L = levels[lvl]; G = new KittyGame(L); ctx.setLevel(`Level ${L.n}`); banner.textContent = L.teaches; lastLives = G.lives;
+    const L = levels[lvl]; G = new KittyGame(L); lastLives = G.lives;
+    rules = levelRules(levels, lvl); cards.show(rules, PACE);
+    const intro = introTime(rules), demo = demoRule(rules), n = L.puzzle.solution.positions.length - L.puzzle.locked.length;
+    bot = { phase: 'intro', t: 0, intro, demo, slipped: !demo, think: thinkTime(n, intro, demo ? PACE[DEMO[demo]] + PACE.lift + PACE.fly : 0), mv: null };
     root = new THREE.Group(); scene.add(root); fx = new THREE.Group(); root.add(fx);
     const { w, h, cells } = L.puzzle.board;
     // Coats: each facing gets its own coat, as the shipped Board.AssignCatSkins does (seeded per level here).
@@ -157,6 +166,8 @@ export async function create(ctx) {
       const p = cellPos(i), color = c.kind === 'play' ? REGION[c.region % REGION.length] : '#ffffff';
       const mat = gloss(color); mat.userData.base = new THREE.Color(color);
       const t = new THREE.Mesh(tileGeo, mat); t.userData = { cell: i, ownMat: true, lift: 0, liftTo: 0, liftV: 0, red: 0 }; t.position.copy(p).setY(0.1);
+      // The puddle replaces the tile (Cell.UpdateState hides the tile mesh under the shipped Puddle sprite).
+      if (c.kind === 'puddle') { mat.visible = false; const pm = new THREE.MeshBasicMaterial({ map: puddleTex, transparent: true, alphaTest: 0.05 }); const pd = new THREE.Mesh(puddleGeo, pm); pd.userData.ownMat = true; pd.position.y = 0.02; pd.renderOrder = 1; t.add(pd); }
       // Cell pop-in, staggered along the diagonals (CellPopStagger .04, .3s).
       t.scale.setScalar(0.001); const d = (i % w + Math.floor(i / w)) * CFG.cellPopStagger;
       after(d, () => tweens.add(CFG.cellPop, k => t.scale.setScalar(Math.max(0.001, k)), easeOutCubic));
@@ -229,8 +240,10 @@ export async function create(ctx) {
     const aspect = (ctx.el.clientWidth || 1) / (ctx.el.clientHeight || 1), { w, h } = levels[lvl].puzzle.board;
     const pts = [[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([sx, sz]) => new V3(sx * (w / 2 + 0.6), 0, sz * (h / 2 + 0.6)));
     pts.push(new V3(-1.6, 1.0, h / 2 + 2.1), new V3(1.6, 1.0, h / 2 + 2.1), new V3(0, 1.0, -h / 2 - 0.3));
-    const el = 58 * Math.PI / 180;
-    fitPerspective(camera, pts, aspect, { dir: new V3(0, Math.sin(el), Math.cos(el)), top: 0.26, bottom: 0.2 });
+    const el = 58 * Math.PI / 180, H = ctx.el.clientHeight || 600;
+    // The top band (about 100px) belongs to the rule dock; the bottom corners to the hint and lives.
+    fitPerspective(camera, pts, aspect, { dir: new V3(0, Math.sin(el), Math.cos(el)), top: Math.max(0.26, 2 * 100 / H), bottom: Math.max(0.12, 2 * 26 / H) });
+    cards.resize(ctx.el.clientWidth || 600);
   }
 
   // ---- Carrying: lift a tray cat, follow a hand point, sway, drop. ----
@@ -278,6 +291,9 @@ export async function create(ctx) {
   function drop(i) {
     const c = release(); if (!c) return;
     const { cat } = c, ch = cat.ch, from = ch.root.position.clone().sub(pivotWorld(ch));
+    if (i >= 0) moves++;
+    // Refused (a booked square, or the puddle): back to the tray at no cost, and the rule that refused it flashes.
+    if (i >= 0 && (G.ruledOut().has(i) || levels[lvl].puzzle.board.cells[i].kind === 'puddle')) cards.flash(G.why(i, cat.dir));
     if (i < 0 || !canDrop(i, cat.dir)) { sendHome(cat, from, { sound: i < 0 ? null : 'tapError' }); return; }
     const r = G.place(i, cat.dir);
     if (!r.ok) { sendHome(cat, from, { sound: 'tapError' }); return; }
@@ -297,19 +313,64 @@ export async function create(ctx) {
       return;
     }
     // Wrong: the cat sits there annoyed, the square goes red, a life goes; then it hops back to the tray.
-    wrongCats.set(i, cat); refreshHud(); play('wrong', { volume: 0.5 });
-    const dog = G.watchedBy(i), tile = tiles[i];
+    wrongCats.set(i, cat); refreshHud(); play('wrong', { volume: 0.5 }); cards.flash(r.rule);
+    const dog = G.watchedBy(i), tile = tiles[i], mouse = r.rule === 'mouse' ? G.mouseInSight(i, cat.dir) : -1;
     tweens.add(CFG.wrongFade, k => { tile.userData.red = k; }, linear);
-    if (dog >= 0 && dogs.has(dog)) { // DogScare: the cat flinches and bolts, the dog barks
+    if (dog >= 0 && dogs.has(dog)) { // DogScare: the cat flinches and bolts, the dog barks, and its line shows
       anim(ch, 'scared', { fade: 0.1 }); const dg = dogs.get(dog); anim(dg, 'bark', { fade: 0.1, then: 'idle', exit: 0.95 }); play('bark'); after(0.5, () => play('bark', { rate: 1.05 }));
-    } else { anim(ch, 'angry', { fade: 0.1, then: 'sit', exit: 0.3 }); after(0.05, () => play('angry')); }
+      dogVision(dog);
+    } else if (mouse < 0 || !mice.has(mouse)) { anim(ch, 'angry', { fade: 0.1, then: 'sit', exit: 0.3 }); after(0.05, () => play('angry')); }
     ctx.shake(1);
     if (G.over) { end(); return; }
+    if (mouse >= 0 && mice.has(mouse)) { chase(cat, i, mouse, c.slot); return; }
     const scared = dog >= 0 && dogs.has(dog);
     after(scared ? CFG.scareHold + 0.2 : CFG.wrongReturn, () => {
       if (wrongCats.get(i) !== cat) return;
       wrongCats.delete(i); tweens.add(CFG.wrongFade, k => { tile.userData.red = 1 - k; }, linear);
       sendHome(cat, ch.root.position.clone(), { run: scared });
+    });
+  }
+  // Board.ShowDogVision: the dog's emblem pops along every square it watches, nearest first, and fades after 3 s
+  // (DogIconStagger .05, scale 1.5 -> 1 over .4, DogIconShowTime 3).
+  function dogVision(dog) {
+    const cells = levels[lvl].puzzle.board.cells, dir = cells[dog].dir, o = cellPos(dog);
+    const watched = cells.map((c, k) => k).filter(k => G.watchedBy(k) === dog).sort((a, b) => cellPos(a).distanceToSquared(o) - cellPos(b).distanceToSquared(o));
+    const tilt = /E/.test(dir) ? -0.2 : /W/.test(dir) ? 0.2 : 0;
+    watched.forEach((k, n) => {
+      const m = new THREE.Mesh(sightGeo, new THREE.MeshBasicMaterial({ map: sightTex, color: '#ffffff', transparent: true, opacity: 0.9, depthWrite: false }));
+      m.userData.ownMat = true; m.position.y = 0.175; m.rotation.y = tilt; m.scale.setScalar(0.001); m.renderOrder = 3; tiles[k].add(m);
+      after(n * 0.05, () => tweens.add(0.4, t => m.scale.setScalar(1.5 - 0.5 * t), easeOutBack));
+      after(n * 0.05 + 3, () => tweens.add(0.4, t => m.scale.setScalar(Math.max(0.001, 1 - t)), easeInOut, () => { m.removeFromParent(); m.material.dispose(); }));
+    });
+  }
+  // ReflectorChase: a cat that looks at a mouse spots it, pounces, and the pair bolt off the board; the mouse comes
+  // back to its square and a fresh cat drops into the tray.
+  function chase(cat, i, mi, slot) {
+    const ch = cat.ch, m = mice.get(mi), tok = motion(ch), g0 = G, tile = tiles[i];
+    const home = m.root.position.clone(), yaw0 = m.yaw.rotation.y, start = cellPos(i).setY(TOP);
+    const flee = home.clone().sub(start).setY(0); if (flee.lengthSq() < 1e-6) flee.set(0, 0, 1); flee.normalize();
+    const land = home.clone().addScaledVector(flee, -0.45).setY(TOP), yaw = Math.atan2(flee.x, flee.z);
+    after(0.35, () => {
+      if (ch.token !== tok || G !== g0) return;
+      ch.yaw.rotation.y = yaw; anim(ch, 'run', { fade: 0.08 }); play('angry', { rate: 1.1 });
+      tweens.add(0.45, k => { if (ch.token === tok) { ch.root.position.lerpVectors(start, land, k); ch.root.position.y += Math.sin(k * Math.PI) * 0.55; } }, linear);
+    });
+    after(0.95, () => {
+      if (ch.token !== tok || G !== g0) return;
+      m.yaw.rotation.y = yaw; anim(m, m.acts.run ? 'run' : 'idle', { fade: 0.08 }); play('pop', { rate: 1.3 });
+      wrongCats.delete(i); tweens.add(CFG.wrongFade, k => { tile.userData.red = 1 - k; }, linear);
+      const D = 7, T = 1.5, c0 = ch.root.position.clone();
+      tweens.add(T, k => {
+        if (G !== g0) return;
+        m.root.position.copy(home).addScaledVector(flee, D * k); m.root.position.y = home.y + Math.abs(Math.sin(k * 22)) * 0.05;
+        if (ch.token === tok) ch.root.position.copy(c0).addScaledVector(flee, D * 0.9 * k);
+        const s = k > 0.75 ? Math.max(0.001, 1 - (k - 0.75) / 0.25) : 1; m.yaw.scale.setScalar(s); if (ch.token === tok) ch.yaw.scale.setScalar(s);
+      }, linear, () => {
+        if (G !== g0) return;
+        if (ch.token === tok) dropChar(ch);
+        m.root.position.copy(home); m.yaw.rotation.y = yaw0; anim(m, 'idle', { fade: 0 }); popIn(m, 0.25);
+        refill(slot, 0.1);
+      });
     });
   }
   // Bot / hint / tap-to-place: carry the lifted cat over to square i along an arc, then drop it.
@@ -383,13 +444,16 @@ export async function create(ctx) {
       if (auto) { lvl = win ? (lvl + 1) % LEVELS.length : lvl; build(); return; }
       if (win) {
         const last = lvl === LEVELS.length - 1;
-        ctx.result({ win: true, last, title: last ? 'All clear!' : 'Purr-fect!', sub: last ? 'Five shipped levels, from first rules to the dog. 45 more in the store.' : `KittyDoku · level ${levels[lvl].n}`, next: () => { lvl = (lvl + 1) % LEVELS.length; build(); }, retry: () => build() });
+        const fresh = rules.filter(r => r.fresh), sub = last ? 'Every rule and every mechanic the shipped game teaches, all on one board.' : fresh.length > 1 ? 'The three rules, down. Every square can be worked out without guessing.' : `${fresh[0]?.title || 'That one'}: mastered. A new mechanic is next.`;
+        ctx.result({ win: true, last, title: last ? 'All clear!' : 'Purr-fect!', sub, next: () => { lvl = (lvl + 1) % LEVELS.length; build(); }, retry: () => build() });
       } else ctx.result({ win: false, title: 'Out of lives', sub: 'Three wrong cats. Every square can be worked out without guessing.', next: () => build() });
     });
   }
 
   // ---- Input: press a tray cat to lift it, drag, release over a square. A tap without a drag keeps it lifted in its
-  // slot; then a tap on a square carries it there (the fallback for anyone who would rather not drag). ----
+  // slot; then a tap on a square carries it there (the fallback for anyone who would rather not drag). Only a press on
+  // a tray cat is acted on at pointerdown (grabbable(), so the stage keeps the page from scrolling for that touch);
+  // everything else waits for a real tap (onTap), so a swipe over the board scrolls the page.
   const ray = new THREE.Raycaster(), plane = new THREE.Plane(new V3(0, 1, 0), -TOP);
   function rayAt(e) { const r = ctx.el.getBoundingClientRect(); ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camera); }
   function boardCellAt(e, dragging = false) {
@@ -399,19 +463,17 @@ export async function create(ctx) {
     return { i: col >= 0 && row >= 0 && col < w && row < h ? row * w + col : -1, p };
   }
   function slotAt(e) { rayAt(e); const hit = ray.intersectObjects(slots.map(s => s.hit))[0]; return hit ? slots[hit.object.userData.slot] : null; }
+  // Fingers drop the cat one row above themselves (touchOffset), so on touch screens a drag ends below its square.
+  const coarse = matchMedia('(pointer: coarse)');
+  const screenOf = p => { const v = p.clone().project(camera), r = ctx.el.getBoundingClientRect(); return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; };
+  const dragOf = (s, cell) => ({ drag: [screenOf(s.pos.clone().setY(0.45)), screenOf(cellPos(cell).setY(TOP).add(new V3(0, 0, coarse.matches ? -CFG.touchOffset : 0)))] });
   let press = null;
   function onDown(e) {
-    if (auto || G.over || e.button > 0 || carry?.bot) return;
-    const s = slotAt(e), { i, p } = boardCellAt(e);
-    if (carry && carry.mode === 'held') {
-      if (s === carry.slot) { carry.mode = 'drag'; startPress(e); return; }
-      if (i >= 0 && !s) { flyTo(i, 0.45); return; }
-      const c = release(); sendHome(c.cat, c.cat.ch.root.position.clone().sub(pivotWorld(c.cat.ch)));
-      if (!s?.cat) return;
-    }
+    if (dead || auto || !G || G.over || e.button > 0 || carry?.bot || e.target.closest?.('button')) return;
+    const s = slotAt(e);
+    if (carry && carry.mode === 'held') { if (s === carry.slot) { carry.mode = 'drag'; startPress(e); } return; }
     if (carry) return;
-    if (s?.cat) { pick(s, 'drag'); startPress(e); return; }
-    if (i >= 0) tapOccupant(i);
+    if (s?.cat) { pick(s, 'drag'); startPress(e); }
   }
   function startPress(e) { e.preventDefault(); /* no text selection or page autoscroll while dragging */ press = { x: e.clientX, y: e.clientY, moved: false, id: e.pointerId }; addEventListener('pointermove', onMove); addEventListener('pointerup', onUp); addEventListener('pointercancel', onUp); }
   function onMove(e) {
@@ -427,6 +489,17 @@ export async function create(ctx) {
     if (!pr.moved && e.type === 'pointerup') { carry.mode = 'held'; carry.target.copy(carry.slot.pos).setY(TOP + 1.05); carry.slot.ring.visible = true; hoverCell(-1); return; }
     drop(e.type === 'pointerup' ? boardCellAt(e, true).i : -1);
   }
+  // A tap: carries a lifted cat to the tapped square (or puts it back), or pokes a board resident.
+  onTap(ctx.el, e => {
+    if (dead || auto || !G || G.over || press || carry?.bot) return; // `press`: this tap is the one that lifted a cat
+    const s = slotAt(e), { i } = boardCellAt(e);
+    if (carry && carry.mode === 'held') {
+      if (s === carry.slot) return;
+      if (i >= 0) { flyTo(i, 0.45); return; }
+      const c = release(); sendHome(c.cat, c.cat.ch.root.position.clone().sub(pivotWorld(c.cat.ch))); return;
+    }
+    if (!carry && i >= 0 && !s) tapOccupant(i);
+  });
   // Taps on the board's other residents (Board.TryPlayOccupantTap) and on a placed cat (Celebrate).
   function tapOccupant(i) {
     if (dogs.has(i)) { const d = dogs.get(i); anim(d, 'bark', { fade: 0.1, then: 'idle', exit: 0.95 }); play('bark'); return; }
@@ -434,25 +507,59 @@ export async function create(ctx) {
     if (boardCats.has(i)) { anim(boardCats.get(i).ch, 'happy', { fade: 0.1, then: 'sit', exit: 0.3 }); play('meow', { rate: 1.1 }); }
   }
   function onHover(e) {
-    if (auto || G.over || carry) return hov.set(null);
+    if (auto || !G || G.over || carry) return hov.set(null);
     const s = slotAt(e); hov.set(s?.cat ? s.cat.ch.root : null);
   }
   ctx.el.addEventListener('pointerdown', onDown);
   const hov = hoverSprings(), leave = () => hov.set(null);
   ctx.el.addEventListener('pointermove', onHover); ctx.el.addEventListener('pointerleave', leave);
 
+  // ---- Attract bot ----
+  // Its next move: the shipped answer cat by cat, except for one deliberate slip after the first cat on a level that
+  // brings in a new rule (core.js demoMove), so the rule's card flashes and the board shows what that rule does.
+  function plan() {
+    if (!G || G.over) return null;
+    if (auto && bot && !bot.slipped && G.confirmedCount() - levels[lvl].puzzle.locked.length >= 1) {
+      bot.pending ||= G.demoMove(bot.demo); if (bot.pending) return bot.pending; bot.slipped = true;
+    }
+    return G.botMove();
+  }
+  const ready = s => !!s?.cat && s.cat.ch.yaw.scale.x > 0.99 && !wrongCats.size && !carry;
+  function botStep(d) {
+    if (!auto || !bot || G.over || ended) return;
+    bot.t += d;
+    // While the cards deal in, the bot already lifts its first cat and holds it up, as if reading the rules.
+    if (bot.phase === 'intro') {
+      if (!bot.slot && bot.t >= 0.5) { const mv = plan(), s = mv && slots.find(x => x.dir === mv.dir); if (ready(s) && pick(s, 'held', true)) Object.assign(bot, { mv, slot: s }); }
+      if (bot.t >= bot.intro) {
+        if (bot.slot && carry?.bot) { ctx.botMove(dragOf(bot.slot, bot.mv.cell)); Object.assign(bot, { phase: 'act', t: 0 }); } else Object.assign(bot, { phase: 'think', t: bot.think });
+      }
+      return;
+    }
+    if (bot.phase === 'think') {
+      const mv = plan(), s = mv && slots.find(x => x.dir === mv.dir);
+      if (!ready(s) || bot.t < bot.think) return;
+      if (mv.slip) { bot.slipped = true; bot.pending = null; }
+      ctx.botMove(dragOf(s, mv.cell)); // the ghost hand presses the tray cat and drags it over
+      Object.assign(bot, { phase: 'act', t: 0, mv, slot: s });
+      return;
+    }
+    if (bot.phase === 'act') {
+      if (bot.t < PACE.lift) return;
+      const c = carry?.bot && carry.slot === bot.slot ? carry : !carry && bot.slot.cat ? pick(bot.slot, 'held', true) : null;
+      if (c) flyTo(bot.mv.cell, PACE.fly);
+      Object.assign(bot, { phase: 'wait', t: 0 });
+      return;
+    }
+    if (bot.phase === 'wait' && !carry && bot.t >= PACE.fly + PACE.settle) Object.assign(bot, { phase: 'think', t: 0 });
+  }
+
   // ---- Frame ----
-  const _q = new THREE.Quaternion();
   function update(dt) {
     hov.update(dt);
     if (!G) return;
     const d = dt * speed;
-    // Attract bot: lift the next cat of the shipped answer, carry it over and drop it, the same path a player takes.
-    if (auto && !carry && !G.over && !ended) {
-      botT += d;
-      const mv = G.botMove(), s = mv && slots.find(x => x.dir === mv.dir);
-      if (botT > 0.55 && s?.cat && s.cat.ch.yaw.scale.x > 0.99) { botT = 0; const c = pick(s, 'held', true); if (c) after(0.3, () => { if (carry === c) flyTo(mv.cell); }); }
-    }
+    botStep(d);
     tweens.update(d);
     if (carry) {
       const ch = carry.cat.ch;
@@ -476,16 +583,22 @@ export async function create(ctx) {
     }
   }
 
-  hud = document.createElement('div'); hud.className = 'arcade-lives'; ctx.ui.append(hud);
-  banner = document.createElement('div'); banner.className = 'arcade-teach'; ctx.ui.append(banner);
+  hud = document.createElement('div'); hud.className = 'arcade-lives kd-lives'; ctx.ui.append(hud);
+  cards = createCards(ctx.ui, base, ctx.reduce);
   hintBtn = document.createElement('button'); hintBtn.type = 'button'; hintBtn.className = 'arcade-hint'; hintBtn.textContent = '💡 Hint'; ctx.ui.append(hintBtn);
   // Hint, as shipped: the right cat lifts out of the tray and flies to its square.
   hintBtn.addEventListener('click', () => {
     if (auto || G.over || carry) return; const h = G.hint(); if (!h) return;
     const s = slots.find(x => x.dir === h.dir), c = s?.cat && pick(s, 'held', true); if (c) after(0.2, () => { if (carry === c) flyTo(h.cell, 0.6); });
   });
-  // Stop the bot without leaving a cat in mid-air: one it is carrying goes back to the tray.
-  function stopBot() { auto = false; speed = 1; if (carry?.bot) { const c = release(); sendHome(c.cat, c.cat.ch.root.position.clone().sub(pivotWorld(c.cat.ch))); } }
+  // Stop the bot. A cat it is carrying snaps straight back into its tray slot, so the visitor can grab it at once.
+  function stopBot() {
+    auto = false; speed = 1; if (bot) Object.assign(bot, { phase: 'think', t: 0, pending: null });
+    if (!carry?.bot) return;
+    const c = release(), s = c.slot, cat = c.cat, ch = cat.ch; motion(ch);
+    ch.mul = 1; ch.pivotK = 0; ch.swing.quaternion.identity(); ch.yaw.scale.setScalar(1); faceDir(ch, cat.dir); placeInner(ch);
+    ch.root.position.copy(s.pos); anim(ch, 'sit', { fade: 0.12 }); s.cat = cat; cat.cell = undefined;
+  }
   build();
   const api = {
     scene, camera, update, resize: () => fit(),
@@ -493,37 +606,52 @@ export async function create(ctx) {
     restart() { stopBot(); lvl = 0; build(); },
     takeover() { stopBot(); if (G.over) { if (G.result === 'win') lvl = (lvl + 1) % LEVELS.length; build(); } },
     reloadLevel() { stopBot(); build(); },
+    // A press here may start a drag: a tray cat (or the slot of the one held up), in any mode.
+    grabbable(x, y) {
+      if (dead || !G || G.over) return false;
+      const s = slotAt({ clientX: x, clientY: y });
+      return !!s && (!!s.cat || carry?.slot === s);
+    },
     test: {
       set speed(v) { speed = v; },
-      get state() { return { total: LEVELS.length, level: lvl + 1, shipped: levels[lvl].n, over: G.over, result: G.result, progress: G.cats().filter(c => c.confirmed && !c.given).length, onBelt: carry ? 1 : 0, auto, lives: G.lives, booked: G.ruledOut().size }; },
+      get state() { return { total: LEVELS.length, level: lvl + 1, over: G.over, result: G.result, progress: G.confirmedCount() - levels[lvl].puzzle.locked.length, onBelt: carry ? 1 : 0, auto, moves, lives: G.lives, booked: G.ruledOut().size, rules: rules.map(r => r.id + (r.fresh ? '*' : '')) }; },
       reset() { stopBot(); lvl = 0; build(); },
       goto(n) { stopBot(); lvl = n - 1; build(); },
-      // The next move toward the shipped answer as a real drag: from the right tray cat to its square.
+      // The bot's next move as a real drag, from its tray cat to its square (to the finger point on touch screens).
+      // While the bot plays this is the move it is about to make, slip included.
       nextMove() {
-        if (carry || G.over || ended) return null; const mv = G.botMove(); if (!mv) return null;
-        const s = slots.find(x => x.dir === mv.dir); if (!s?.cat) return null;
-        return { drag: [this.screenOf(s.pos.clone().setY(0.45)), this.screenOf(cellPos(mv.cell).setY(TOP))] };
+        if (!G || G.over || ended) return null;
+        if (!auto && carry) return null;
+        const mv = plan(); if (!mv) return null;
+        const s = slots.find(x => x.dir === mv.dir); if (!s || !(s.cat || (auto && carry?.bot && carry.slot === s))) return null;
+        return dragOf(s, mv.cell);
       },
       // A drag that should cost a life: an open, unbooked square that is not in the answer.
       wrongCell() {
         const sol = new Set(levels[lvl].puzzle.solution.positions), cells = levels[lvl].puzzle.board.cells;
-        for (const s of slots) { if (!s.cat) continue; const i = cells.findIndex((c, k) => c.kind === 'play' && !sol.has(k) && canDrop(k, s.dir)); if (i >= 0) return { drag: [this.screenOf(s.pos.clone().setY(0.45)), this.screenOf(cellPos(i).setY(TOP))] }; }
+        for (const s of slots) { if (!s.cat) continue; const i = cells.findIndex((c, k) => c.kind === 'play' && !sol.has(k) && canDrop(k, s.dir)); if (i >= 0) return dragOf(s, i); }
         return null;
       },
       // A drag into a dog's line of sight: wrong, and the cat is scared off (DogScare).
       scareCell() {
         const cells = levels[lvl].puzzle.board.cells;
-        for (const s of slots) { if (!s.cat) continue; const i = cells.findIndex((c, k) => c.kind === 'play' && G.watchedBy(k) >= 0 && canDrop(k, s.dir)); if (i >= 0) return { drag: [this.screenOf(s.pos.clone().setY(0.45)), this.screenOf(cellPos(i).setY(TOP))] }; }
+        for (const s of slots) { if (!s.cat) continue; const i = cells.findIndex((c, k) => c.kind === 'play' && G.watchedBy(k) >= 0 && canDrop(k, s.dir)); if (i >= 0) return dragOf(s, i); }
         return null;
       },
       // A drag onto a booked square: refused, no life lost.
-      bookedCell() { const b = [...G.ruledOut()][0], s = slots.find(x => x.cat); return b === undefined || !s ? null : { drag: [this.screenOf(s.pos.clone().setY(0.45)), this.screenOf(cellPos(b).setY(TOP))] }; },
-      screenOf(p) { const v = p.clone().project(camera), r = ctx.el.getBoundingClientRect(); return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; },
+      bookedCell() { const b = [...G.ruledOut()][0], s = slots.find(x => x.cat); return b === undefined || !s ? null : dragOf(s, b); },
+      // Screen rectangles of the board tray and the cat tray (for layout checks against the HUD and the rule dock).
+      layout() {
+        const { w, h } = levels[lvl].puzzle.board, tz = h * CELL / 2 + 1.35, rect = pts => { const q = pts.map(screenOf); return { left: Math.min(...q.map(p => p.x)), right: Math.max(...q.map(p => p.x)), top: Math.min(...q.map(p => p.y)), bottom: Math.max(...q.map(p => p.y)) }; };
+        const bw = w / 2 + 0.35, bh = h / 2 + 0.35, tw = slots.length * CFG.trayGap / 2 + 0.3;
+        return { board: rect([[-bw, -bh], [bw, -bh], [-bw, bh], [bw, bh]].map(([x, z]) => new V3(x, 0, z))), tray: rect([[-tw, tz - 0.65], [tw, tz - 0.65], [-tw, tz + 0.65], [tw, tz + 0.65]].map(([x, z]) => new V3(x, 0, z))) };
+      },
+      screenOf,
     },
     destroy() {
       dead = true; ctx.el.removeEventListener('pointerdown', onDown); ctx.el.removeEventListener('pointermove', onHover); ctx.el.removeEventListener('pointerleave', leave);
       removeEventListener('pointermove', onMove); removeEventListener('pointerup', onUp); removeEventListener('pointercancel', onUp);
-      hud.remove(); banner.remove(); hintBtn.remove(); disposeScene(scene);
+      hud.remove(); cards.destroy(); hintBtn.remove(); disposeScene(scene);
     },
   };
   return api;

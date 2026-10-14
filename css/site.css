@@ -66,9 +66,6 @@ em.acc, .acc { color: var(--acc); font-style: normal; }
 .stats b { display: block; font: 800 40px/1 var(--display); color: var(--ink); }
 .stats span { font: 500 11px/1.4 var(--mono); letter-spacing: .1em; color: var(--dim); text-transform: uppercase; }
 .cta-row { display: flex; gap: 12px; flex-wrap: wrap; }
-.phones { display: flex; justify-content: center; align-items: flex-start; gap: 18px; padding: 10px 0 30px; }
-.phones .ph { width: min(30%, 190px); flex: none; }
-.phones .t1 { margin-top: 40px; } .phones .t3 { margin-top: 64px; }
 
 /* Sections */
 .sec { padding: 72px 0; border-top: 1px solid var(--line); }
@@ -76,7 +73,7 @@ em.acc, .acc { color: var(--acc); font-style: normal; }
 .sec-head p { max-width: 420px; margin-bottom: 28px; }
 
 /* Shipped games */
-.games { display: grid; grid-template-columns: repeat(7, 1fr); gap: 14px; }
+.games { display: grid; grid-template-columns: repeat(8, 1fr); gap: 14px; }
 .game { position: relative; display: block; text-decoration: none; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
   padding: 16px 12px 14px; text-align: center; transition: border-color .2s, transform .2s; }
 .game:hover { border-color: #3a4456; transform: translateY(-4px); }
@@ -209,9 +206,6 @@ footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wr
   .hero .wrap { grid-template-columns: 1fr; gap: 10px; }
   .hero p.lede { font-size: 16px; }
   .stats { gap: 22px; } .stats b { font-size: 32px; }
-  .phones { gap: 10px; padding: 24px 0 30px; }
-  .phones .ph { width: 30%; border-width: 3px; border-radius: 18px; }
-  .phones .t1 { margin-top: 22px; } .phones .t3 { margin-top: 36px; }
   .sec { padding: 52px 0; }
   .games { grid-template-columns: repeat(4, 1fr); gap: 8px; }
   .game { padding: 10px 4px; border-radius: 14px; }
@@ -274,14 +268,6 @@ footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wr
 .arcade-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: pointer; }
 .arcade-ui { position: absolute; inset: 0; pointer-events: none; z-index: 2; font-family: 'Russo One', var(--display); }
 .arcade-ui > * { pointer-events: auto; }
-.arcade-pill { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); pointer-events: none !important; background: #5a4bc4; color: #fff; font-size: 13px;
-  letter-spacing: .06em; text-transform: uppercase; padding: 5px 16px 6px; border-radius: 0 0 12px 12px; box-shadow: 0 3px 0 #3c2f95; }
-.arcade-prompt { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); border: 0; cursor: pointer; background: var(--acc); color: var(--acc-ink);
-  border-radius: 18px; padding: 10px 18px; display: grid; gap: 2px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,.45); animation: bob2 1.6s ease-in-out infinite; }
-.arcade-prompt b { font: 400 17px/1.1 'Russo One', var(--display); letter-spacing: .02em; }
-.arcade-prompt span { font: 500 11px/1.2 var(--body); opacity: .75; }
-.arcade-prompt[hidden] { display: none; }
-@keyframes bob2 { 50% { transform: translate(-50%, -4px); } }
 .arcade-card { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 24px; text-align: center;
   background: rgba(20,14,40,.82); backdrop-filter: blur(3px); animation: pop-in .35s cubic-bezier(.3,1.5,.5,1) both; z-index: 5; }
 .arcade-card[hidden] { display: none; }
@@ -295,7 +281,7 @@ footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wr
 .arcade-how { font-size: 13px; line-height: 1.45; margin: 10px 4px 0; min-height: 2.9em; }
 .arcade.no-webgl .arcade-screen::after { content: 'This browser can\'t run the 3D games. The store links below show them.'; position: absolute; inset: 0; display: grid; place-items: center; padding: 30px; text-align: center; color: var(--mute); font-size: 14px; }
 @media (max-width: 420px) { .arcade { padding: 12px 10px 10px; } .arcade-tab span { display: none; } .arcade-tab { justify-content: center; } }
-@media (prefers-reduced-motion: reduce) { .arcade-prompt, .arcade-card, .arcade-load i { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .arcade-card, .arcade-load i { animation: none; } }
 .arcade-count { position: absolute; left: 50%; top: 40px; transform: translateX(-50%); pointer-events: none !important; background: #fff; color: #4a62c9; font-size: 15px;
   padding: 4px 14px; border-radius: 10px; border: 2px solid #8fb0ff; box-shadow: 0 3px 0 #8fb0ff; }
 .arcade-count:empty { display: none; }
@@ -310,9 +296,9 @@ footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wr
   font: 400 16px/1 'Russo One', var(--display); box-shadow: 0 3px 0 #e2b77d; cursor: pointer; }
 .arcade-speed.on { background: #ffb547; color: #4a2a0a; }
 
-/* Play band: one colour section per game. The games draw into a single fixed, transparent canvas (#gl) inside each
-   section's .play-stage rectangle, so the boards float on the colour with only their shadow beneath them. */
-#gl { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 10; }
+/* Play band: one colour section per game. The games draw into a single transparent canvas (#gl, moved to the scroll
+   position every frame) inside each section's .play-stage rectangle, so the boards float on the colour with only their shadow beneath them. */
+#gl { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 10; will-change: transform; }
 .play-band { padding-bottom: 40px; }
 .game-sec { position: relative; background: var(--g-bg); color: var(--g-ink); padding: 56px 0; overflow: hidden; }
 .game-sec::before { content: ''; position: absolute; inset: 0; background: radial-gradient(60% 70% at 55% 45%, #ffffff40, transparent 70%); pointer-events: none; }
@@ -323,7 +309,7 @@ footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wr
 .game-copy .game-blurb { font-weight: 600; opacity: 1; font-size: 17px; }
 .game-how b { display: block; font: 600 11px/1.4 var(--mono); letter-spacing: .12em; text-transform: uppercase; margin-bottom: 4px; }
 .game-store { display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: 99px; background: var(--g-ink); color: var(--g-bg); font-weight: 700; font-size: 14px; text-decoration: none; }
-.play-stage { position: relative; height: min(76vh, 700px); min-height: 520px; touch-action: none; cursor: pointer; }
+.play-stage { position: relative; height: min(76vh, 700px); min-height: 520px; touch-action: pan-y; cursor: pointer; -webkit-user-select: none; user-select: none; }
 .play-stage .arcade-ui { position: absolute; inset: 0; z-index: 11; pointer-events: none; font-family: 'Russo One', var(--display); }
 .play-stage .arcade-ui > * { pointer-events: auto; }
 .play-stage .arcade-load { position: absolute; inset: 0; display: none; place-items: center; align-content: center; gap: 12px; color: var(--g-ink); font: 600 12px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; }
@@ -344,3 +330,72 @@ footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wr
 .arcade-card.lose b { color: #ffd6dc; }
 @keyframes card-shake { 20%, 60% { transform: translateX(-10px) rotate(-1deg); } 40%, 80% { transform: translateX(10px) rotate(1deg); } }
 @media (prefers-reduced-motion: reduce) { .arcade-card.lose { animation: none; } }
+
+/* Attract mode: a ghost hand plays the bot's moves and a spinning ring invites the visitor to jump in. */
+.arcade-ghost, .arcade-ring, .arcade-yay, .arcade-ripple { pointer-events: none !important; }
+.arcade-ghost { position: absolute; left: 0; top: 0; width: 54px; height: 54px; margin: -6px 0 0 -20px; opacity: 0; transition: opacity .4s; filter: drop-shadow(0 6px 6px rgba(20,10,40,.35)); }
+.arcade-ghost svg { width: 100%; height: 100%; display: block; }
+.arcade-ghost i { position: absolute; left: 30px; top: 40px; font: 400 10px/1 'Russo One', var(--display); font-style: normal; letter-spacing: .08em; background: #241b3a; color: #fff; padding: 3px 5px 2px; border-radius: 6px; }
+.attract .arcade-ghost { opacity: 1; }
+.arcade-ring { position: absolute; left: 0; top: 0; width: 112px; height: 112px; margin: -56px 0 0 -56px; opacity: 0; transition: opacity .35s, transform .5s cubic-bezier(.3,.8,.3,1); }
+.arcade-ring.cursor { transition: opacity .35s, transform .08s linear; }
+.attract .arcade-ring { opacity: 1; }
+.arcade-ring svg { width: 100%; height: 100%; display: block; animation: ring-spin 9s linear infinite; overflow: visible; }
+.arcade-ring .ring-bg { fill: #ffffffd9; stroke: #241b3a; stroke-width: 3; }
+.arcade-ring text { font: 400 13.5px 'Russo One', var(--display); fill: #241b3a; letter-spacing: .04em; }
+.arcade-ring .ring-core { fill: var(--acc, #ff5a7a); stroke: #241b3a; stroke-width: 3; animation: ring-pulse 1.1s ease-in-out infinite alternate; transform-origin: 60px 60px; }
+.arcade-ring .ring-play { fill: #fff; stroke: #241b3a; stroke-width: 2.5; stroke-linejoin: round; animation: ring-spin 9s linear infinite reverse; transform-origin: 60px 60px; }
+.play-stage.attract:hover { cursor: none; }
+@keyframes ring-spin { to { transform: rotate(360deg); } }
+@keyframes ring-pulse { to { transform: scale(1.12); } }
+.arcade-ripple { position: absolute; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; border: 3px solid #fff; animation: ripple .55s ease-out forwards; }
+@keyframes ripple { from { transform: scale(.4); opacity: 1; } to { transform: scale(3.4); opacity: 0; } }
+.arcade-yay { position: absolute; left: 50%; top: 42%; font: 400 clamp(34px, 6vw, 56px)/1 'Russo One', var(--display); color: #fff; text-transform: uppercase; -webkit-text-stroke: 2px #241b3a; text-shadow: 0 6px 0 #241b3a; opacity: 0; transform: translate(-50%, -50%) scale(.2) rotate(-8deg); white-space: nowrap; }
+.arcade-yay.go { animation: yay 1.3s cubic-bezier(.2,1.6,.4,1) forwards; }
+@keyframes yay { 0% { opacity: 0; transform: translate(-50%,-50%) scale(.2) rotate(-12deg); } 25% { opacity: 1; transform: translate(-50%,-50%) scale(1.08) rotate(-4deg); } 70% { opacity: 1; transform: translate(-50%,-50%) scale(1) rotate(-4deg); } 100% { opacity: 0; transform: translate(-50%,-90%) scale(.9) rotate(-4deg); } }
+@media (prefers-reduced-motion: reduce) { .arcade-ghost { display: none; } .arcade-ring { left: 50%; top: auto; bottom: 20px; margin: 0 0 0 -56px; transform: none !important; } .arcade-ring svg, .arcade-ring .ring-core, .arcade-ring .ring-play { animation: none; } }
+
+/* Store phones beside each game: the store screenshots take turns, sliding in like a phone carousel. */
+.game-phone[data-cycle] img { position: absolute; inset: 0; }
+.js .game-phone[data-cycle] img { opacity: 0; transform: translateX(100%); transition: transform .6s cubic-bezier(.65,0,.35,1), opacity .6s; }
+.js .game-phone[data-cycle] img.on { opacity: 1; transform: none; }
+.js .game-phone[data-cycle] img.out { opacity: 1; transform: translateX(-100%) scale(.96); }
+.game-phone[data-cycle]::after { content: ''; position: absolute; left: 50%; bottom: 10px; width: 34px; height: 6px; transform: translateX(-50%); border-radius: 3px;
+  background: radial-gradient(circle at 3px 3px, #fff 2.2px, transparent 2.6px) 0 0 / 14px 6px repeat-x; opacity: .55; z-index: 2; }
+.game-phone[data-cycle] .dot { position: absolute; bottom: 10px; width: 6px; height: 6px; margin-left: -17px; border-radius: 3px; background: #fff; left: 50%; z-index: 3; transition: transform .6s cubic-bezier(.65,0,.35,1); }
+@media (prefers-reduced-motion: reduce) { .js .game-phone[data-cycle] img { transition: opacity .4s; transform: none !important; } }
+
+/* Hero 3D: voxel P-L-A-Y + a thumping arrow + one character per game (js/games/hero/hero.js, its own canvas). The
+   canvas bleeds right to the page edge and down into the play band (scroll pours the word into it); it never takes
+   pointer input — the box does. The CSS word below is the no-WebGL / no-JS fallback, hidden after the first frame. */
+.hero { position: relative; overflow-x: clip; }
+.hero .wrap > div:first-child { position: relative; z-index: 3; }
+.hero-3d { position: relative; height: clamp(500px, 44vw, 620px); touch-action: pan-y; -webkit-tap-highlight-color: transparent; }
+.hero-gl { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
+.hero-fallback { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px; pointer-events: none; }
+.js .hero-3d:not(.no-gl) .hero-fallback, .hero-3d.live .hero-fallback { visibility: hidden; }
+.hf-word { display: flex; gap: .04em; font: 400 clamp(84px, 11vw, 168px)/.9 'Russo One', var(--display); transform: rotate(-4deg) skewX(-6deg); }
+.hf-word b { font-weight: 400; color: var(--c); text-shadow: 1px 1px 0 var(--d), 2px 2px 0 var(--d), 3px 3px 0 var(--d), 4px 4px 0 var(--d), 5px 5px 0 var(--d), 6px 6px 0 var(--d), 7px 7px 0 var(--d), 8px 8px 0 var(--d), 14px 22px 28px #0009; }
+.hf-word b:nth-child(even) { transform: translateY(.08em) rotate(5deg); }
+.hf-arrow { width: 0; height: 0; border: 54px solid transparent; border-top: 64px solid var(--acc); border-bottom: 0; filter: drop-shadow(6px 7px 0 #5b8a1e); animation: hf-bob 1.1s cubic-bezier(.5,0,.4,1.6) infinite; }
+@keyframes hf-bob { 50% { transform: translateY(14px) scaleY(1.12); } }
+.hero-go { position: absolute; left: 50%; bottom: 6px; z-index: 3; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 10px; white-space: nowrap;
+  font: 400 15px/1 'Russo One', var(--display); letter-spacing: .04em; text-transform: uppercase; text-decoration: none; color: var(--acc-ink); background: var(--acc);
+  padding: 14px 22px 13px; border-radius: 99px; box-shadow: 0 5px 0 #5b8a1e, 0 14px 30px #b6f36a33; transition: transform .15s, box-shadow .15s; }
+.hero-go:hover { transform: translateX(-50%) translateY(2px); box-shadow: 0 3px 0 #5b8a1e, 0 10px 26px #b6f36a55; }
+.hero-go span { display: inline-block; animation: hf-nudge 1.1s ease-in-out infinite; }
+@keyframes hf-nudge { 50% { transform: translateY(4px); } }
+.hero-tip { position: absolute; left: 0; top: 0; z-index: 4; pointer-events: none; white-space: nowrap; font: 400 13px/1 'Russo One', var(--display); letter-spacing: .04em;
+  color: #241b3a; background: #fff; padding: 8px 11px 7px; border-radius: 10px; box-shadow: 0 4px 0 #241b3a33; }
+@media (max-width: 760px) {
+  .hero-3d { order: -1; height: min(86vw, 360px); margin: -6px 0 6px; }
+  .hf-word { font-size: 22vw; }
+  .hf-arrow { border-width: 36px; border-top-width: 44px; border-bottom: 0; }
+  .hero-go { font-size: 13px; padding: 12px 18px 11px; bottom: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .hf-arrow, .hero-go span { animation: none; } }
+.hero-3d::before { content: ''; position: absolute; left: -10%; right: -10%; top: -6%; bottom: 4%; z-index: 0; pointer-events: none; opacity: .55;
+  background: radial-gradient(46% 38% at 52% 34%, #b6f36a1f, transparent 70%), radial-gradient(40% 34% at 70% 62%, #a98cf522, transparent 70%); }
+.hero-3d.bang::before { animation: hero-bang .6s ease-out; }
+@keyframes hero-bang { 0% { opacity: 1; transform: scale(1.18); filter: brightness(2.4); } 100% { opacity: .55; transform: none; filter: none; } }
+@media (prefers-reduced-motion: reduce) { .hero-3d.bang::before { animation: none; } }

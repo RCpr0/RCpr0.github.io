@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Arsalan Awan — Technical Game Designer</title>
-<meta name="description" content="Technical game designer for mobile puzzle games. 7 shipped titles, 1,300+ levels, and the generators, solvers and analytics behind them.">
+<meta name="description" content="Technical game designer for mobile puzzle games. 8 shipped titles, 1,350+ levels, and the generators, solvers and analytics behind them.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Arsalan Awan — Technical Game Designer">
-<meta property="og:description" content="I design puzzles, then build the tools that prove them. 7 shipped mobile puzzle games, 1,300+ levels.">
+<meta property="og:description" content="I design puzzles, then build the tools that prove them. 8 shipped mobile puzzle games, 1,350+ levels.">
 <meta property="og:image" content="https://rcpr0.github.io/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -31,28 +31,28 @@
   <div>
     <div class="mono">// Technical game designer · Mobile puzzle</div>
     <h1>I design puzzles, <em>then build the tools</em> that prove them.</h1>
-    <p class="lede">Game designer at Mindstorm Studios and primary designer on seven shipped mobile puzzle games. I own core loops, FTUE and difficulty curves, and I back each decision with procedural generators, solvers, playtest bots and player data.</p>
+    <p class="lede">Game designer at Mindstorm Studios and primary designer on eight shipped mobile puzzle games. I own core loops, FTUE and difficulty curves, and I back each decision with procedural generators, solvers, playtest bots and player data.</p>
     <div class="stats">
-      <div><b>7</b><span>Shipped titles</span></div>
-      <div><b>1,300+</b><span>Levels shipped</span></div>
-      <div><b>1</b><span>Game built solo</span></div>
+      <div><b>8</b><span>Shipped titles</span></div>
+      <div><b>1,350+</b><span>Levels shipped</span></div>
+      <div><b>2</b><span>Games built end to end</span></div>
     </div>
     <div class="cta-row">
       <a class="btn" href="#work">See the work</a>
       <a class="btn o" href="Arsalan-Awan-CV.pdf" download>Download CV</a>
     </div>
   </div>
-  <div class="phones" aria-label="Gameplay from three games">
-    <div class="ph t1"><img src="media/hero/mice.webp" alt="Mice Flow gameplay: a voxel castle being cleared by mice"></div>
-    <div class="ph t2" data-video aria-label="Play or pause: Rainbow Launcher event in Hexa Sort"><img src="media/video/rainbow-spawn.webp" alt="Rainbow Launcher event firing in a Hexa Sort level"><video src="media/video/rainbow-spawn.mp4" poster="media/video/rainbow-spawn.webp" muted loop playsinline preload="none"></video></div>
-    <div class="ph t3"><img src="media/store/yarncollect-1.webp" alt="Yarn Collect level with baskets of yarn on a looping road"></div>
+  <div class="hero-3d" data-hero>
+    <div class="hero-fallback" aria-hidden="true"><span class="hf-word"><b style="--c:#f4a340;--d:#b8661a">P</b><b style="--c:#b8a0f2;--d:#6f55b8">L</b><b style="--c:#f7c84f;--d:#b98a12">A</b><b style="--c:#ff9db0;--d:#c85a72">Y</b></span><span class="hf-arrow"></span></div>
+    <div class="hero-tip" hidden></div>
+    <a class="hero-go" href="#play">Play 5 shipped games <span aria-hidden="true">↓</span></a>
   </div>
 </div></header>
 
 <section class="sec play-band" id="play"><div class="wrap">
   <div class="sec-head reveal">
     <div><div class="mono">00 / Play my games</div><h2>Real levels from shipped games</h2></div>
-    <div><p>Each one runs the shipped rules and levels with the shipped art, right here. A bot is playing; tap to take over.</p>
+    <div><p>Each one runs the shipped rules and levels with the shipped art, right here. A bot is playing. Jump in whenever you like: your first move takes over.</p>
     <button class="snd" type="button" data-sound-toggle aria-pressed="false"><span>Sound off</span></button></div>
   </div>
 </div></section>
@@ -61,12 +61,12 @@
     <div class="game-copy">
       <img class="game-icon" src="media/store/icon-sandflow.webp" alt="Sand Flow icon">
       <h3>Sand Flow</h3>
-      <p class="game-blurb">Four shipped levels, the shipped rules and the shipped art. Picture to sand to carts, live.</p>
+      <p class="game-blurb">Five shipped levels that build up the mechanics: mystery carts, generators, crates, keys and locks. Picture to sand to carts, live.</p>
       <p class="game-how"><b>How to play</b> Tap a cart with a clear path to the belt. It rides under the picture and collects sand of its colour. Fill the belt with carts that have nothing to take and it jams.</p>
       <a class="game-store" href="https://play.google.com/store/apps/details?id=com.mindstorm.sandflow" target="_blank" rel="noopener">Get it on Google Play →</a>
     </div>
     <div class="play-stage" data-stage="sandflow" aria-label="Playable Sand Flow"><div class="arcade-ui"></div><div class="arcade-load" aria-hidden="true"><i></i>Loading level</div></div>
-    <div class="game-phone ph"><img src="media/store/sandflow-1.webp" alt="Sand Flow on the store" loading="lazy"></div>
+    <div class="game-phone ph" data-cycle aria-label="Sand Flow store screenshots"><img src="media/store/sandflow-1.webp" alt="Sand Flow on the store" loading="lazy"><img src="media/store/sandflow-2.webp" alt="" loading="lazy"><img src="media/store/sandflow-3.webp" alt="" loading="lazy"></div>
   </div>
 </section>
 <section class="game-sec" id="play-yarn" style="--g-bg:#b8a0f2;--g-ink:#24124a">
@@ -74,12 +74,12 @@
     <div class="game-copy">
       <img class="game-icon" src="media/store/icon-yarncollect.webp" alt="Yarn Collect icon">
       <h3>Yarn Collect</h3>
-      <p class="game-blurb">Five shipped levels on the shipped road splines, with the game’s own drop rules.</p>
+      <p class="game-blurb">Six shipped levels, one mechanic each: tunnels, mystery yarn, locked baskets, counters and coloured baskets, then all at once.</p>
       <p class="game-how"><b>How to play</b> Tap a basket to send its top yarn onto the road. Yarn drops into the first basket showing its colour. Finish every basket with eight of one colour.</p>
       <a class="game-store" href="https://play.google.com/store/apps/details?id=com.mindstorm.yarncollect" target="_blank" rel="noopener">Get it on Google Play →</a>
     </div>
     <div class="play-stage" data-stage="yarn" aria-label="Playable Yarn Collect"><div class="arcade-ui"></div><div class="arcade-load" aria-hidden="true"><i></i>Loading level</div></div>
-    <div class="game-phone ph"><img src="media/store/yarncollect-1.webp" alt="Yarn Collect on the store" loading="lazy"></div>
+    <div class="game-phone ph" data-cycle aria-label="Yarn Collect store screenshots"><img src="media/store/yarncollect-1.webp" alt="Yarn Collect on the store" loading="lazy"><img src="media/store/yarncollect-2.webp" alt="" loading="lazy"><img src="media/store/yarncollect-3.webp" alt="" loading="lazy"></div>
   </div>
 </section>
 <section class="game-sec" id="play-mice" style="--g-bg:#f7c84f;--g-ink:#3a2605">
@@ -87,12 +87,12 @@
     <div class="game-copy">
       <img class="game-icon" src="media/store/icon-miceflow.webp" alt="Mice Flow icon">
       <h3>Mice Flow</h3>
-      <p class="game-blurb">Three shipped levels. I built this game alone, with Claude and Codex.</p>
+      <p class="game-blurb">Four shipped levels that add mystery houses, walls, cheese cartons and crates. I built this game alone, with Claude and Codex.</p>
       <p class="game-how"><b>How to play</b> Tap a house with a clear path to the tray. Its mice run out and carry off blocks of their colour, from the outside of the picture in.</p>
       <a class="game-store" href="https://play.google.com/store/apps/details?id=com.mindstorm.miceflow" target="_blank" rel="noopener">Get it on Google Play →</a>
     </div>
     <div class="play-stage" data-stage="mice" aria-label="Playable Mice Flow"><div class="arcade-ui"></div><div class="arcade-load" aria-hidden="true"><i></i>Loading level</div></div>
-    <div class="game-phone ph"><img src="media/store/miceflow-1.webp" alt="Mice Flow on the store" loading="lazy"></div>
+    <div class="game-phone ph" data-cycle aria-label="Mice Flow store screenshots"><img src="media/store/miceflow-1.webp" alt="Mice Flow on the store" loading="lazy"><img src="media/store/miceflow-2.webp" alt="" loading="lazy"><img src="media/store/miceflow-3.webp" alt="" loading="lazy"></div>
   </div>
 </section>
 <section class="game-sec" id="play-kitty" style="--g-bg:#ff9db0;--g-ink:#4a1020">
@@ -100,12 +100,12 @@
     <div class="game-copy">
       <img class="game-icon" src="media/store/icon-kittydoku.webp" alt="KittyDoku icon">
       <h3>KittyDoku</h3>
-      <p class="game-blurb">Five shipped levels, from first rules to the dog, checked by the level workbench’s own solver.</p>
-      <p class="game-how"><b>How to play</b> Pick a cat in the tray, then tap a square. One cat per colour, no two touching, and no cat may see another. Every level solves without guessing.</p>
+      <p class="game-blurb">Six shipped levels, one new rule each: mice, grass, puddles and the dog. Every one checked by the level workbench’s own solver.</p>
+      <p class="game-how"><b>How to play</b> Drag a cat from the tray onto a square. One cat per colour, no two touching, and no cat may see another. Every level solves without guessing.</p>
       <a class="game-store" href="https://play.google.com/store/apps/details?id=com.mindstorm.kittydoku" target="_blank" rel="noopener">Get it on Google Play →</a>
     </div>
     <div class="play-stage" data-stage="kitty" aria-label="Playable KittyDoku"><div class="arcade-ui"></div><div class="arcade-load" aria-hidden="true"><i></i>Loading level</div></div>
-    <div class="game-phone ph"><img src="media/store/kittydoku-1.webp" alt="KittyDoku on the store" loading="lazy"></div>
+    <div class="game-phone ph" data-cycle aria-label="KittyDoku store screenshots"><img src="media/store/kittydoku-1.webp" alt="KittyDoku on the store" loading="lazy"><img src="media/store/kittydoku-2.webp" alt="" loading="lazy"><img src="media/store/kittydoku-3.webp" alt="" loading="lazy"></div>
   </div>
 </section>
 <section class="game-sec" id="play-toyland" style="--g-bg:#8fd0ff;--g-ink:#0b2a4a">
@@ -113,12 +113,12 @@
     <div class="game-copy">
       <img class="game-icon" src="media/store/icon-toylandgo.webp" alt="Toyland Go! icon">
       <h3>Toyland Go!</h3>
-      <p class="game-blurb">Shipped levels with the shipped rules and art: sort the toys, and they shoot the picture apart.</p>
+      <p class="game-blurb">Six shipped levels that add capsules, scarf pairs, chains and ice. Sort the toys, and they shoot the picture apart. I built it end to end, largely on my own, with Meshy for the toys.</p>
       <p class="game-how"><b>How to play</b> Drag toys between shelves. Three of a kind merge into a shooter that blasts blocks of its colour off the picture. Shooters leave only from the top of their column.</p>
       <a class="game-store" href="https://play.google.com/store/apps/details?id=com.mindstorm.goodsortshooter" target="_blank" rel="noopener">Get it on Google Play →</a>
     </div>
     <div class="play-stage" data-stage="toyland" aria-label="Playable Toyland Go!"><div class="arcade-ui"></div><div class="arcade-load" aria-hidden="true"><i></i>Loading level</div></div>
-    <div class="game-phone ph"><img src="media/store/toylandgo-1.webp" alt="Toyland Go! on the store" loading="lazy"></div>
+    <div class="game-phone ph" data-cycle aria-label="Toyland Go! store screenshots"><img src="media/store/toylandgo-1.webp" alt="Toyland Go! on the store" loading="lazy"><img src="media/store/toylandgo-2.webp" alt="" loading="lazy"><img src="media/store/toylandgo-3.webp" alt="" loading="lazy"></div>
   </div>
 </section>
 
@@ -148,6 +148,9 @@
     <a class="game" href="https://play.google.com/store/apps/details?id=com.mindstorm.miceflow" target="_blank" rel="noopener">
       <img class="ph peek" src="media/store/miceflow-1.webp" alt="" loading="lazy">
       <img class="icon" src="media/store/icon-miceflow.webp" alt="Mice Flow icon" loading="lazy"><b>Mice Flow</b><small>Built solo</small></a>
+    <a class="game" href="https://play.google.com/store/apps/details?id=com.mindstorm.goodsortshooter" target="_blank" rel="noopener">
+      <img class="ph peek" src="media/store/toylandgo-1.webp" alt="" loading="lazy">
+      <img class="icon" src="media/store/icon-toylandgo.webp" alt="Toyland Go! icon" loading="lazy"><b>Toyland Go!</b><small>Built end to end</small></a>
     <a class="game" href="https://play.google.com/store/apps/details?id=com.mindstorm.kittydoku" target="_blank" rel="noopener">
       <img class="ph peek" src="media/store/kittydoku-1.webp" alt="" loading="lazy">
       <img class="icon" src="media/store/icon-kittydoku.webp" alt="KittyDoku icon" loading="lazy"><b>KittyDoku</b><small>50 levels</small></a>
@@ -287,5 +290,6 @@
 <script src="js/site.js"></script>
 <script type="importmap">{ "imports": { "three": "./js/vendor/three.module.min.js" } }</script>
 <script type="module" src="js/games/stage.js"></script>
+<script type="module" src="js/games/hero/hero.js"></script>
 </body>
 </html>

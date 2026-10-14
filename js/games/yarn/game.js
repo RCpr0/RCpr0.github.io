@@ -5,11 +5,24 @@
 //   connector, the eight CarSpots, and the BucketComplete swap + glass lid when a basket fills;
 // - yarn balls use the ball shader's own colours (BaseColor = AO x lerp(Color_1, Color_2), emission per colour) and the
 //   CarAnimationConfig moves: exit arc with stretch and landing squash, roll and sway on the road, enter arc + basket punch.
+// - mechanics from the Container prefab: the locked basket's BucketCap lid + Ribbons_LP bow in the key colour (RibbonOpen
+//   when it opens), the counter basket's DeliveryBox with its number (the box flies off at zero), the colored basket's
+//   bucket_Gray shell in its ColourBucket material, and the mystery ball (the black yarn ball with a white "?").
 // Rules live in core.js.
-import { YarnGame, CAPACITY } from './core.js';
-import { loadModel, loadTexture, tweenList, easeOutBack, easeOutCubic, easeInOut, disposeScene, addRig, fitPerspective, hoverSprings } from '../common.js';
+import { YarnGame, CAPACITY, BOT_START, BOT_GAP } from './core.js';
+import { loadModel, loadTexture, tweenList, easeOutBack, easeOutCubic, easeInOut, disposeScene, addRig, fitPerspective, hoverSprings, onTap } from '../common.js';
 
-const LEVELS = [1, 2, 3, 4, 5];
+// Shipped levels, one per mechanic in the order the game unlocks them (MechanicConfig), then one that mixes them.
+const LEVELS = [1, 2, 3, 4, 5, 6];
+const TITLES = ['Portal tunnels', 'Mystery yarn', 'Locked baskets', 'Counter baskets', 'Colored basket', 'Mixed mechanics'];
+// ColorConfig per colour: RibbonColor, ContainerMaterial base + emission (ColourBucket/*), ContainerSpotColor + alpha.
+const TINT = {
+  0: ['#C82B34', '#CA3232', '#57030B', '#FF6E76', 0.19], 1: ['#2A84E6', '#398EEB', '#021445', '#2E85E5', 0.40], 2: ['#E6D331', '#F2C23F', '#783505', '#FFF268', 0.21],
+  3: ['#5FCC12', '#5AC111', '#0B2B01', '#72D42C', 0.64], 4: ['#D77003', '#E98440', '#902203', '#FFBC78', 0.25], 5: ['#9C1CCE', '#8D06C2', '#240143', '#D051FF', 0.16],
+  6: ['#DA29C5', '#C909B2', '#510340', '#FF5EEC', 0.26], 7: ['#52C2DC', '#7DD5E9', '#0F2D36', '#7ECEE0', 0.17], 8: ['#525ECA', '#202EAA', '#0F1471', '#5A6BFF', 0.25],
+  9: ['#984F00', '#A45501', '#140500', '#C56109', 0.37], 10: ['#0C8004', '#0C8004', '#011F00', '#0BA702', 0.54], 11: ['#820000', '#5A1C1C', '#600000', '#CD3333', 0.32],
+  12: ['#00C183', '#00CA79', '#002B0F', '#3EDCA3', 0.64], 13: ['#F2F2F2', '#DFD1D1', '#454040', '#FCFCFC', 0.29], 14: ['#3A3030', '#3A3030', '#000000', '#000000', 0.2],
+};
 // Per colour: the ball material's _Color_1 and _Emission (Art/Material/Ball/*), ColorConfig colour for effects.
 const BALL = {
   0: ['#BE2129', 0.16, '#FD2833'], 1: ['#1B80EF', 0.61, '#248CFD'], 2: ['#DEBD17', 0.19, '#FFEB3A'], 3: ['#5EB823', 0.16, '#87FF33'],
@@ -19,7 +32,8 @@ const BALL = {
 };
 const PRAISE = ['praise-great.webp', 'praise-nice.webp', 'praise-perfect.webp', 'praise-awesome.webp'];
 const SOUNDS = { tap: 'tap.mp3', error: 'tap-error.mp3', out: 'ball-out.mp3', fit: 'ball-fit.mp3', done: 'basket-done.mp3', last: 'last-sort.mp3',
-  full: 'out-of-slots.mp3', fail: 'soft-fail.mp3', win: 'level-complete.mp3', confetti: 'confetti.mp3' };
+  full: 'out-of-slots.mp3', fail: 'soft-fail.mp3', win: 'level-complete.mp3', confetti: 'confetti.mp3',
+  mystery: 'mystery.mp3', unlock: 'lock-open.mp3', counter: 'counter-open.mp3' };
 // Shipped numbers (Unity units).
 const ROAD_Y = -1, ROAD_WS = 0.4, ROAD_HS = 0.5, ROAD_RES = 5, ARROW_GAP = 4, BOX_S = 1.15;
 const R_IN = 0.64, R_ROAD = 0.74; // balls: bigger than the prefab's 0.58 / 0.65 so they read at portfolio size
@@ -29,13 +43,18 @@ export async function create(ctx) {
   let dead = false;
   const { THREE, base, env } = ctx;
   const T = n => loadTexture(base + n);
-  const [ballM, boxM, doneM, pathM, tunnelM, bridgeM, roadTex, basketTex, yarnTex, glassTex, tunnelTex, bridgeTex, arrowTex, ringTex, sparkTex, dotTex, cellTex, praiseTex, levels, play] = await Promise.all([
+  const [ballM, boxM, doneM, pathM, tunnelM, bridgeM, capM, ribbonM, crateM, roadTex, basketTex, yarnTex, glassTex, tunnelTex, bridgeTex, arrowTex, ringTex, sparkTex, dotTex, cellTex,
+    ribbonTex, crateTex, grayTex, deliveryTex, deliveryArrowTex, praiseTex, levels, play] = await Promise.all([
     loadModel(base + 'YarnBall.json'), loadModel(base + 'YarnBox.json'), loadModel(base + 'BucketComplete.json'), loadModel(base + 'Path.json'), loadModel(base + 'Tunnel.json'), loadModel(base + 'Bridge.json'),
+    loadModel(base + 'Cap.json'), loadModel(base + 'Ribbon.json'), loadModel(base + 'Box.json'),
     T('road.webp'), T('basket.webp'), T('yarn.webp'), T('glass.webp'), T('tunnel.webp'), T('bridge.webp'), T('arrow.webp'), T('ring.webp'), T('sparkle.webp'), T('dot.webp'), T('cell.webp'),
+    T('ribbon.webp'), T('box.webp'), T('basket-gray.webp'), T('delivery.webp'), T('delivery-arrow.webp'),
     Promise.all(PRAISE.map(T)), Promise.all(LEVELS.map(n => fetch(`${base}level${n}.json`).then(r => r.json()))),
     ctx.loadSounds(SOUNDS),
   ]);
   const sfx = (n, o) => play(n, o);
+  // The "?" and the counter digits are drawn once into textures: wait for the HUD font so the fallback never gets baked in.
+  try { await Promise.race([document.fonts?.load("100px 'Russo One'"), new Promise(r => setTimeout(r, 1500))]); } catch { /* fallback font */ }
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(30, 1, 0.5, 400);
@@ -47,13 +66,46 @@ export async function create(ctx) {
   const W = (x, y, h = 0) => new THREE.Vector3(x, h, -y); // game x/y (y = Unity z) -> three
 
   // ---------- materials ----------
-  for (const t of [roadTex, basketTex, yarnTex, tunnelTex]) t.anisotropy = 4;
+  for (const t of [roadTex, basketTex, yarnTex, tunnelTex, grayTex, crateTex]) t.anisotropy = 4;
   roadTex.wrapS = roadTex.wrapT = THREE.RepeatWrapping;
   const roadBase = new THREE.Color('#f4f0ff'), roadEmis = new THREE.Color('#a4a4a4'), warn = new THREE.Color('#ff2000');
   const roadMat = new THREE.MeshStandardMaterial({ color: roadBase.clone(), map: roadTex, roughness: 0.85, emissive: roadEmis.clone(), emissiveMap: roadTex, envMap: env, envMapIntensity: 0.25 });
   // Basket: pink plastic with a metallic sheen and a hard clear coat (reads like the store art's glossy boxes).
   const basketMat = new THREE.MeshPhysicalMaterial({ color: '#f2e0ee', map: basketTex, metalness: 0.6, roughness: 0.15, clearcoat: 1, clearcoatRoughness: 0.04,
     emissive: '#101010', emissiveMap: basketTex, envMap: env, envMapIntensity: 1.4 });
+  // Colored basket: the same glossy shell on the grey bucket texture, in the colour's ColourBucket material.
+  const colorMats = new Map();
+  const colorMat = c => {
+    if (!colorMats.has(c)) { const [, b, e] = TINT[c] || TINT[13];
+      colorMats.set(c, new THREE.MeshPhysicalMaterial({ color: b, map: grayTex, metalness: 0.45, roughness: 0.16, clearcoat: 1, clearcoatRoughness: 0.04,
+        emissive: e, emissiveMap: grayTex, envMap: env, envMapIntensity: 1.3 })); }
+    return colorMats.get(c);
+  };
+  const colorCellMat = c => { const [, , , sc, a] = TINT[c] || TINT[13]; return new THREE.MeshBasicMaterial({ map: cellTex, color: sc, transparent: true, opacity: Math.min(0.85, a + 0.35), depthWrite: false, toneMapped: false }); };
+  // Locked basket: the lid in Cap_Ribbon (bucket texture, lilac) and the bow in the key colour's Ribbon material.
+  const capMat = new THREE.MeshPhysicalMaterial({ color: '#bdb7d2', map: basketTex, metalness: 0.35, roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.05,
+    emissive: '#48144a', emissiveMap: basketTex, envMap: env, envMapIntensity: 1.2 });
+  const ribbonMats = new Map();
+  const ribbonMat = c => {
+    if (!ribbonMats.has(c)) { const col = new THREE.Color(TINT[c]?.[0] || '#ffffff');
+      ribbonMats.set(c, new THREE.MeshPhysicalMaterial({ color: col, map: ribbonTex, roughness: 0.35, metalness: 0.1, clearcoat: 0.8, clearcoatRoughness: 0.1,
+        emissive: col.clone().multiplyScalar(0.3), envMap: env, envMapIntensity: 0.9 })); }
+    return ribbonMats.get(c);
+  };
+  // Counter basket: the cardboard DeliveryBox, its brown icons, and the count in white with a dark rim (CounterText).
+  const crateMat = new THREE.MeshStandardMaterial({ color: '#d5d5d5', map: crateTex, roughness: 0.75, emissive: '#2f2f2f', emissiveMap: crateTex, envMap: env, envMapIntensity: 0.5 });
+  const iconMat = new THREE.MeshBasicMaterial({ map: deliveryTex, color: '#96400b', transparent: true, opacity: 0.58, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
+  const arrowIconMat = new THREE.MeshBasicMaterial({ map: deliveryArrowTex, color: '#6a3008', transparent: true, opacity: 0.95, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
+  function labelTex(text, size = 128) {
+    const c = document.createElement('canvas'); c.width = c.height = size; const g = c.getContext('2d');
+    g.font = `${Math.round(size * 0.78)}px 'Russo One', 'Arial Black', sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.lineJoin = 'round'; g.lineWidth = size * 0.12; g.strokeStyle = '#2a1640'; g.strokeText(text, size / 2, size * 0.54);
+    g.fillStyle = '#ffffff'; g.fillText(text, size / 2, size * 0.54);
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+  }
+  const numTex = new Map(), numberTex = n => { if (!numTex.has(n)) numTex.set(n, labelTex(String(n))); return numTex.get(n); };
+  // Mystery ball: the black yarn ball (Ball black) under a white "?".
+  const qMat = new THREE.SpriteMaterial({ map: labelTex('?'), transparent: true, depthWrite: false, toneMapped: false });
   // CarSpots cells: the shipped RoundedSquare sprite, white at 15%, under each slot.
   const cellMat = new THREE.MeshBasicMaterial({ map: cellTex, transparent: true, opacity: 0.18, depthWrite: false, toneMapped: false });
   const cellGeo = new THREE.PlaneGeometry(1.29, 1.21).rotateX(-Math.PI / 2);
@@ -106,6 +158,26 @@ export async function create(ctx) {
   // Connector: Road_Path_Prefab, a narrow piece of the road (width x0.2416) from the basket's mouth wall to the lane.
   const bridgeGeo = seg.geo.clone().scale(0.2416, 0.5, 1.75 / seg.len).translate(0, LANE_Y - 0.2, 3.85);
   const tunnelGeo = tunnelM.parts[0].geometry.clone(); tunnelGeo.translate(-(tunnelM.min.x + tunnelM.max.x) / 2, -tunnelM.min.y, -(tunnelM.min.z + tunnelM.max.z) / 2);
+  // Container prefab frames (Unity, basket-local): BucketCap at (0, -0.37, -0.27), DeliveryBox at (0, -1.01, -0.25), both
+  // yawed -90 and x1.15 like the box; Ribbons_LP sits in the cap's frame at y -0.65, y x1.18.
+  const prepAt = (g, y, z) => g.clone().rotateY(-Math.PI / 2).scale(BOX_S, BOX_S, BOX_S).translate(0, y, -z);
+  const capGeo = prepAt(capM.parts[0].geometry, -0.37, -0.27);
+  const ribbonGeos = ribbonM.parts.map(p => prepAt(p.geometry.clone().scale(1, 1.18, 1).translate(0, -0.65, 0), -0.37, -0.27));
+  // The DeliveryBox is built as its own frame so its icons keep their prefab places: Unity basket-local (x, y, z) is
+  // three (x, y, -z); a yaw of -90 there is +90 here; the raw FBX mesh (mirrored on import) turns half a turn.
+  const crateGeo = crateM.parts[0].geometry.clone().rotateY(Math.PI);
+  const iconGeo = new THREE.PlaneGeometry(2.24, 2.05);
+  function makeCrate() {
+    const g = new THREE.Group(); g.position.set(0, -1.01, 0.25); g.rotation.y = Math.PI / 2; g.scale.setScalar(BOX_S);
+    const box = new THREE.Mesh(crateGeo, crateMat); box.castShadow = box.receiveShadow = true; g.add(box);
+    const top = new THREE.Mesh(iconGeo, iconMat); top.position.set(0, 1.843 + 0.01, 0); top.rotation.x = -Math.PI / 2; top.scale.setScalar(1.1308); g.add(top);
+    for (const [x, z, yaw] of [[1.648, -1.826, 0], [-1.655, 1.784, 0], [2.82, 0.991, 1], [-2.8, -0.992, 1]]) {
+      const m = new THREE.Mesh(iconGeo, arrowIconMat); m.material.side = THREE.DoubleSide;
+      m.position.set(x, 0.69, -z); m.rotation.y = yaw ? Math.PI / 2 : 0; m.position.x += yaw ? Math.sign(x) * 0.03 : 0; m.position.z += yaw ? 0 : -Math.sign(z) * 0.03;
+      m.scale.setScalar(0.6826); g.add(m);
+    }
+    return g;
+  }
   // Slot k (CarSpots order: 0 = deepest, far from the mouth) in basket-local three coordinates.
   const slotLocal = k => new THREE.Vector3(BOX_S * SLOTS[k][0], -1.23 + 0.14 + R_IN, -(BOX_S * SLOTS[k][1] + 0.04));
 
@@ -210,15 +282,18 @@ export async function create(ctx) {
     hov.clear(); tweens.clear(); simTweens.clear(); later = []; parts.length = 0; conf.count = 0; fx.clear(); fx.add(conf);
     if (root) { scene.remove(root); root.traverse(o => { if (o.userData.own) o.geometry.dispose(); }); } // only per-level geometry; models are shared
     acc = 0; ended = false; warnT = 0; lastFull = -9; ctx.hideResult();
-    G = new YarnGame(levels[lvl]); ctx.setLevel(`Level ${LEVELS[lvl]}`);
+    G = new YarnGame(levels[lvl]);
     root = new THREE.Group(); scene.add(root);
     const r = G.road; H = heightFn(r, levels[lvl].waypoints);
     const road = new THREE.Mesh(buildRoad(r), roadMat); road.castShadow = road.receiveShadow = true; road.userData.own = true; root.add(road);
     const arrows = buildArrows(r); arrows.userData.own = true; root.add(arrows);
-    // Open roads end in the shipped wool tunnels (TunnelOffset -0.3: pulled 0.3 back over the road), opening to the road.
+    // Open roads end in the shipped wool tunnels, the Portal: yarn rolls into one and out of the other (TunnelOffset -0.3:
+    // pulled 0.3 back over the road). Game.SpawnTunnels yaws each one by its road tangent (into the road at the start,
+    // back into it at the end), so the prefab's +Z, the mouth, faces the road. Unity yaw a is -a here, and the raw FBX
+    // mesh (mirrored on import, then mirrored again into this z-flipped world) is half a turn round: rotation = PI - a.
     if (!r.closed) for (const u of [0, 1]) {
       const p = r.at(u), d = r.dir(u), s = u ? -1 : 1, t = new THREE.Mesh(tunnelGeo, tunnelMat);
-      t.position.copy(W(p[0] + d[0] * 0.3 * s, p[1] + d[1] * 0.3 * s, -1.61)); t.rotation.y = Math.atan2(d[0] * s, -d[1] * s) + Math.PI;
+      t.position.copy(W(p[0] + d[0] * 0.3 * s, p[1] + d[1] * 0.3 * s, -1.61)); t.rotation.y = Math.PI - Math.atan2(d[0] * s, d[1] * s);
       t.scale.set(0.912, 1.318, 1.208); t.castShadow = true; t.receiveShadow = true; root.add(t);
     }
     // Bridge.prefab under every raised knot (Bridge.fbx at y -1.11, x1.1), along the road.
@@ -231,14 +306,26 @@ export async function create(ctx) {
     baskets = G.baskets.map((b, i) => {
       const g = new THREE.Group(); g.position.copy(W(b.x, b.y)); g.rotation.y = -b.rot * Math.PI / 180;
       const hover = new THREE.Group(), body = new THREE.Group(); g.add(hover); hover.add(body);
-      const box = new THREE.Mesh(boxGeo, basketMat), lid = new THREE.Mesh(lidGeo, glassMat), bridge = new THREE.Mesh(bridgeGeo, roadMat);
+      const colored = b.mech === 'color', box = new THREE.Mesh(boxGeo, colored ? colorMat(b.key) : basketMat), lid = new THREE.Mesh(lidGeo, glassMat), bridge = new THREE.Mesh(bridgeGeo, roadMat);
       box.castShadow = box.receiveShadow = true; bridge.castShadow = bridge.receiveShadow = true; lid.visible = false; lid.renderOrder = 3;
       body.add(box, lid); g.add(bridge);
-      for (let k = 0; k < CAPACITY; k++) { const c = new THREE.Mesh(cellGeo, cellMat); c.position.copy(slotLocal(k)); c.position.y = -1.23 + 0.13; c.renderOrder = 1; body.add(c); }
+      const cm = colored ? colorCellMat(b.key) : cellMat;
+      for (let k = 0; k < CAPACITY; k++) { const c = new THREE.Mesh(cellGeo, cm); c.position.copy(slotLocal(k)); c.position.y = -1.23 + 0.13; c.renderOrder = 1; body.add(c); }
+      // Locked: the lid with the bow in the key colour. Counter: the delivery box with the number of baskets still to fill.
+      let cover = null, label = null;
+      if (b.mech === 'lock') {
+        cover = new THREE.Group(); const cap = new THREE.Mesh(capGeo, capMat); cap.castShadow = true; cover.add(cap);
+        for (const rg of ribbonGeos) { const m = new THREE.Mesh(rg, ribbonMat(b.key)); m.castShadow = true; cover.add(m); }
+        body.add(cover);
+      } else if (b.mech === 'count') {
+        cover = makeCrate(); body.add(cover);
+        label = new THREE.Sprite(new THREE.SpriteMaterial({ map: numberTex(b.remaining), transparent: true, depthWrite: false, toneMapped: false }));
+        label.position.set(0, 1.4, 0.27); label.scale.setScalar(2.2); label.renderOrder = 4; body.add(label);
+      }
       const hit = new THREE.Mesh(new THREE.BoxGeometry(4.3, 2.4, 6.8), new THREE.MeshBasicMaterial({ visible: false })); hit.position.set(0, -0.5, 0.4); hit.userData.basket = i; hit.userData.own = true; g.add(hit);
       root.add(g);
-      const B = { g, hover, body, box, lid, bridge, hit, b, inside: [], shot: 0 };
-      b.balls.forEach((c, k) => { const v = makeBall(c); v.state = 'basket'; v.B = B; body.add(v.g); v.g.position.copy(slotLocal(k)); v.k = k; B.inside.push(v); });
+      const B = { g, hover, body, box, lid, bridge, hit, b, inside: [], shot: 0, cover, label };
+      b.balls.forEach((c, k) => { const v = makeBall(c, b.hidden[k]); v.state = 'basket'; v.B = B; body.add(v.g); v.g.position.copy(slotLocal(k)); v.k = k; B.inside.push(v); });
       // Level start: baskets drop in, then their yarn pops in.
       body.scale.setScalar(0.001);
       tweens.add(0.45, k => body.scale.setScalar(Math.max(0.001, k)), easeOutBack);
@@ -247,11 +334,58 @@ export async function create(ctx) {
     views = new Map();
     root.updateMatrixWorld(true); fit();
   }
-  function makeBall(c) {
-    const g = new THREE.Group(), m = new THREE.Mesh(ballGeo, ballMat(c));
+  function makeBall(c, hidden = false) {
+    const g = new THREE.Group(), m = new THREE.Mesh(ballGeo, ballMat(hidden ? 14 : c));
     m.castShadow = true; m.scale.setScalar(R_IN * 2); m.rotation.set(Math.random() * 6, Math.random() * 6, Math.random() * 6); g.add(m);
     const o = new THREE.Mesh(ballGeo, outlineMat); o.scale.setScalar(R_IN * 2 * 1.13); o.visible = false; g.add(o);
-    return { g, m, o, c, R: R_IN, sq: 0, sv: 0, seed: Math.random() * 100, lat: 0 };
+    let q = null;
+    if (hidden) { q = new THREE.Sprite(qMat); q.scale.setScalar(1.0); q.renderOrder = 4; g.add(q); } // kept on the camera side of the ball (update)
+    return { g, m, o, q, c, R: R_IN, sq: 0, sv: 0, seed: Math.random() * 100, lat: 0 };
+  }
+  // Car.Reveal: the "?" goes, the yarn shows its colour with a pop and a sparkle (MysteryParticles).
+  function reveal(B, slots) {
+    sfx('mystery', { volume: 0.8 });
+    slots.map(k => B.inside[k]).reverse().forEach((v, j) => after(0.06 * j, () => {
+      if (!v || !v.q) return;
+      v.g.remove(v.q); v.q = null; v.m.material = ballMat(v.c); v.sv += 9;
+      const at = v.g.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.5, 0));
+      burst(sparkTex, at, { size: 0.4, to: 2.2, life: 0.4, spin: 3, color: BALL[v.c][2] });
+      burst(ringTex, at, { size: 0.5, to: 2, life: 0.3, color: '#ffffff', opacity: 0.8 });
+    }));
+  }
+  // RibbonOpen / DeliveryBox: after ContainerUnlockDelay (0.75 s) the lid wobbles, squashes and flies off; the delivery
+  // box squashes, stretches and flies up and away; the counter number goes.
+  function unlock(B) {
+    after(0.75, () => {
+      const c = B.cover; if (!c) return;
+      if (B.b.mech === 'lock') {
+        sfx('unlock');
+        simTweens.add(0.55, k => {
+          const t = k * 0.55;
+          c.rotation.z = t < 0.25 ? Math.sin(t / 0.25 * Math.PI * 3) * 0.05 : -0.2 * Math.max(0, (t - 0.36) / 0.19);
+          const sy = t < 0.25 ? 1 : t < 0.37 ? 0.66 : t < 0.43 ? 0.66 + 0.4 * (t - 0.37) / 0.06 : 1.05 * (1 - (t - 0.43) / 0.12);
+          const sx = t < 0.43 ? 1 : Math.max(0.001, 1 - (t - 0.43) / 0.12);
+          c.scale.set(sx, Math.max(0.001, sy), sx);
+          c.position.y = t < 0.36 ? 0.3 * (t / 0.36) : 0.3 + (t - 0.36) * 40; c.position.z = t < 0.36 ? 0 : -(t - 0.36) * 8;
+        }, x => x, () => { B.body.remove(c); B.cover = null; });
+      } else {
+        sfx('counter');
+        if (B.label) { const l = B.label; simTweens.add(0.2, k => l.scale.setScalar(2.2 * (1 - k) + 0.001), x => x, () => { B.body.remove(l); B.label = null; }); }
+        simTweens.add(0.8, k => {
+          const t = k * 0.8, sy = t < 0.1 ? 1 - 0.15 * t / 0.1 : t < 0.18 ? 0.85 + 0.6 * (t - 0.1) / 0.08 : t < 0.32 ? 1.45 - 0.45 * (t - 0.18) / 0.14 : 1;
+          const fly = Math.max(0, (t - 0.1) / 0.7), shrink = t < 0.43 ? 1 : Math.max(0.001, 1 - (t - 0.43) / 0.2);
+          c.scale.set(BOX_S * shrink, BOX_S * sy * shrink, BOX_S * shrink);
+          c.position.set(5.2 * fly * fly, -1.01 + 7.2 * Math.sin(fly * Math.PI / 2), 0.25); c.rotation.z = -0.44 * fly;
+        }, x => x, () => { B.body.remove(c); B.cover = null; });
+      }
+      burst(dotTex, B.g.localToWorld(new THREE.Vector3(0, 0.6, 0.27)), { size: 2, to: 7, life: 0.35, color: '#ffffff', opacity: 0.6 });
+      B.body.scale.set(1.08, 0.9, 1.08); simTweens.add(0.4, k => { const s = Math.sin(k * Math.PI * 2) * (1 - k); B.body.scale.set(1 + 0.05 * s, 1 - 0.08 * s, 1 + 0.05 * s); }, x => x);
+    });
+  }
+  // Counter tick: the number punches (DOPunchScale 0.3).
+  function countDown(B, left) {
+    if (!B.label) return; B.label.material.map = numberTex(left); B.label.material.needsUpdate = true;
+    const l = B.label; simTweens.add(0.3, k => l.scale.setScalar(2.2 * (1 + 0.3 * Math.sin(k * Math.PI * 2) * (1 - k))), x => x);
   }
 
   // A 30-degree lens from ~58 degrees up (the shipped camera looks down at 55), fitted to the road, baskets and tunnels.
@@ -261,7 +395,9 @@ export async function create(ctx) {
     for (const B of baskets) for (const [x, z] of [[-2, -2.9], [2, -2.9], [-2, 3.4], [2, 3.4]]) pts.push(B.g.localToWorld(new THREE.Vector3(x, 0.2, z)));
     if (!G.road.closed) for (const u of [0, 1]) { const p = G.road.at(u); for (const [dx, dy] of [[-2, -2], [2, -2], [-2, 2], [2, 2]]) pts.push(W(p[0] + dx, p[1] + dy, 1.5)); }
     const el = 58 * Math.PI / 180;
-    fitPerspective(camera, pts, aspect, { dir: new THREE.Vector3(0, Math.sin(el), Math.cos(el)), top: 0.2, bottom: 0.16 });
+    // Keep the board under the road counter (top 40 px + its pill): the top margin is worked out in pixels.
+    const top = Math.max(0.2, 2 * 86 / (ctx.el.clientHeight || 600));
+    fitPerspective(camera, pts, aspect, { dir: new THREE.Vector3(0, Math.sin(el), Math.cos(el)), top, bottom: 0.1 });
   }
 
   // ---------- input ----------
@@ -271,23 +407,25 @@ export async function create(ctx) {
     ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camera);
     const h = ray.intersectObjects(baskets.map(b => b.hit))[0]; return h ? h.object.userData.basket : -1;
   };
-  function onPointer(e) { if (auto || G.over) return; const i = pick(e); if (i >= 0) tap(i); }
+  // A tap (not a press: a swipe over the board scrolls the page). The stage hands the level over before this runs.
+  onTap(ctx.el, e => { if (dead || auto || G.over) return; const i = pick(e); if (i >= 0) tap(i); });
   function onHover(e) {
     if (auto || G.over) return hov.set(null);
-    const i = pick(e), B = baskets[i]; hov.set(B && !B.b.complete && B.b.balls.length ? B.hover : null);
+    const i = pick(e), B = baskets[i]; hov.set(B && !B.b.complete && !B.b.locked && B.b.balls.length ? B.hover : null);
   }
   const leave = () => hov.set(null);
-  ctx.el.addEventListener('pointerdown', onPointer); ctx.el.addEventListener('pointermove', onHover); ctx.el.addEventListener('pointerleave', leave);
+  ctx.el.addEventListener('pointermove', onHover); ctx.el.addEventListener('pointerleave', leave);
 
   function tap(i) {
     const before = G.events.length, r = G.tap(i), B = baskets[i];
     if (!r.ok) {
+      if (r.why === 'nothing') return r; // ContainerTapBuffer.CanTap: locked, empty or finished baskets ignore taps
       sfx(r.why === 'road full' ? 'full' : 'error'); if (r.why === 'road full') { warnT = Math.max(warnT, 0.8); ctx.shake(0.25); }
       // Reject: a quick head-shake of the basket.
       simTweens.add(0.35, k => { B.body.rotation.y = Math.sin(k * Math.PI * 6) * 0.07 * (1 - k); });
       return r;
     }
-    sfx('tap');
+    sfx('tap'); if (r.reveal) { B.body.position.y = 0.2; simTweens.add(0.25, k => { B.body.position.y = 0.2 * (1 - easeOutCubic(k)); }); }
     handle(G.events.splice(before));
     return r;
   }
@@ -297,6 +435,9 @@ export async function create(ctx) {
       if (e.type === 'send') send(B, e.balls);
       if (e.type === 'land') land(B, e.ball);
       if (e.type === 'complete') after(0.3, () => complete(B));
+      if (e.type === 'reveal') reveal(B, e.slots);
+      if (e.type === 'unlock') unlock(B);
+      if (e.type === 'count') countDown(B, e.left);
     }
   }
   // Tap: the basket lifts and tips its mouth toward the road (BucketFront_LiftUp) while the run hops out one by one.
@@ -356,6 +497,7 @@ export async function create(ctx) {
   }
 
   // ---------- per-frame ----------
+  const camDir = new THREE.Vector3(), tmpQ2 = new THREE.Quaternion();
   const up = new THREE.Vector3(0, 1, 0), tmpV = new THREE.Vector3(), axis = new THREE.Vector3(), q = new THREE.Quaternion();
   function roadPos(ball, v, out) {
     const u = G.slotU(ball.slot), p = G.road.at(u), d = G.road.dir(u);
@@ -390,8 +532,9 @@ export async function create(ctx) {
     if (!G) return;
     const sdt = dt * speed;
     acc += sdt; let n = 0;
+    if (auto && !G.over) G.think(3); // the bot's look-ahead, a few ms a frame so phones don't stutter
     while (acc >= 1 / 60 && n < 600) {
-      if (auto && !G.over && G.time - G.lastTap >= 0.45) { const i = G.botChoice(); if (i >= 0) tap(i); }
+      if (auto && !G.over && G.time >= BOT_START && G.time - G.lastTap >= BOT_GAP) { const p = G.plan(); if (p.done && p.i >= 0) { ctx.botMove(screenOfBasket(p.i)); tap(p.i); } }
       G.step(1 / 60); acc -= 1 / 60; n++; clock += 1 / 60;
       handle(G.events.splice(0));
       for (let j = 0; j < later.length; j++) { const l = later[j]; if (clock >= l.at) { later.splice(j--, 1); if (l.g === G) l.fn(); } }
@@ -402,7 +545,12 @@ export async function create(ctx) {
     for (const B of baskets) for (const v of B.inside) if (v.state === 'enter') stepBall(v, sdt);
     tweens.update(dt);
     updateConfetti(sdt);
-    for (const B of baskets) { const run = B.b.complete ? 0 : G.topRun(B.b); B.inside.forEach((v, k) => { v.o.visible = v.state === 'basket' && k >= B.inside.length - run; }); }
+    for (const B of baskets) { const run = B.b.complete || B.b.locked ? 0 : G.topRun(B.b); B.inside.forEach((v, k) => { v.o.visible = v.state === 'basket' && k >= B.inside.length - run; }); }
+    // The "?" of a mystery ball floats on the camera side of it, a little up (the shipped label is tilted 50 deg to the camera).
+    camera.getWorldDirection(camDir).negate();
+    for (const B of baskets) for (const v of B.inside) if (v.q) {
+      v.g.getWorldQuaternion(tmpQ2).invert(); v.q.position.copy(camDir).applyQuaternion(tmpQ2).multiplyScalar(R_IN + 0.18); v.q.position.y += 0.12;
+    }
     // Near fail (NearFailSpotThreshold 2): the road flashes red while it is almost full.
     const free = G.usable - G.onRoad(), danger = !G.over && G.onRoad() > 0 && free <= 2;
     if (danger) warnT = Math.max(warnT, 0.25);
@@ -421,11 +569,15 @@ export async function create(ctx) {
     if (auto) { lvl = res === 'win' ? (lvl + 1) % LEVELS.length : lvl; build(); return; }
     if (res === 'win') {
       const last = lvl === LEVELS.length - 1;
-      ctx.result({ win: true, last, title: last ? 'All clear!' : 'Level complete', sub: last ? `${LEVELS.length} shipped levels. 145 more in the store.` : `Yarn Collect · level ${LEVELS[lvl]}`,
+      ctx.result({ win: true, last, title: last ? 'All clear!' : 'Level complete', sub: last ? 'Every shipped mechanic, sorted.' : `Yarn Collect · ${TITLES[lvl]}`,
         next: () => { lvl = (lvl + 1) % LEVELS.length; build(); }, retry: () => build() });
     } else ctx.result({ win: false, title: 'Tangled!', sub: 'The road filled with yarn that had nowhere to go.', next: () => build() });
   }
 
+  function screenOfBasket(i) {
+    baskets[i].g.updateWorldMatrix(true, false); const v = baskets[i].g.localToWorld(new THREE.Vector3(0, -0.2, 0)).project(camera), r = ctx.el.getBoundingClientRect();
+    return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height };
+  }
   const hud = document.createElement('div'); hud.className = 'arcade-count'; ctx.ui.append(hud);
   build();
   return {
@@ -437,13 +589,21 @@ export async function create(ctx) {
     reloadLevel() { build(); },
     test: {
       set speed(v) { speed = v; },
-      get state() { return { total: LEVELS.length, level: LEVELS[lvl], over: G.over, result: G.result, progress: G.baskets.filter(b => b.complete).length / G.baskets.length, onBelt: G.onRoad(), auto, time: G.time }; },
+      get state() { return { total: LEVELS.length, level: lvl + 1, over: G.over, result: G.result, progress: G.moves ? Math.max(0.01, G.baskets.filter(b => b.complete).length / G.baskets.length) : 0,
+        onBelt: G.onRoad(), auto, moves: G.moves, time: G.time, locked: G.baskets.filter(b => b.locked).length, hidden: G.baskets.reduce((s, b) => s + b.hidden.filter(Boolean).length, 0) }; },
       reset() { auto = false; lvl = 0; build(); },
       goto(n, bot = true) { lvl = n - 1; auto = bot; build(); },
       baskets: () => G.baskets.map((b, i) => ({ i, n: b.balls.length, complete: b.complete })),
-      nextMove() { if (G.over || G.time - G.lastTap < 0.45) return null; const i = G.botChoice(); return i < 0 ? null : this.screenOfBasket(i); },
-      screenOfBasket(i) { baskets[i].g.updateWorldMatrix(true, false); const v = baskets[i].g.localToWorld(new THREE.Vector3(0, -0.2, 0)).project(camera), r = ctx.el.getBoundingClientRect(); return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; },
+      // The bot's next tap. While the bot plays this is what it means to do next (the ghost hand aims there); for the
+      // visitor it waits for the same pace the bot keeps.
+      nextMove() {
+        if (G.over) return null;
+        if (auto) { const p = G.plan(), i = p.done ? p.i : p.hint; return i < 0 ? null : screenOfBasket(i); } // never blocks a frame
+        if (G.time < BOT_START || G.time - G.lastTap < BOT_GAP) return null;
+        const i = G.botChoice(); return i < 0 ? null : screenOfBasket(i);
+      },
+      screenOfBasket: i => screenOfBasket(i),
     },
-    destroy() { dead = true; ctx.el.removeEventListener('pointerdown', onPointer); ctx.el.removeEventListener('pointermove', onHover); ctx.el.removeEventListener('pointerleave', leave); hud.remove(); disposeScene(scene); },
+    destroy() { dead = true; ctx.el.removeEventListener('pointermove', onHover); ctx.el.removeEventListener('pointerleave', leave); hud.remove(); disposeScene(scene); },
   };
 }
