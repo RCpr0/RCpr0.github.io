@@ -4,6 +4,7 @@ import * as THREE from 'three';
 
 const GAMES = [
   { id: 'sandflow', name: 'Sand Flow', icon: 'media/store/icon-sandflow.webp', how: 'Tap a cart with a clear path. It rides the belt and collects its colour.' },
+  { id: 'yarn', name: 'Yarn Collect', icon: 'media/store/icon-yarncollect.webp', how: 'Tap a basket to send its top yarn onto the road. Yarn drops into a basket showing its colour.' },
 ];
 
 const root = document.getElementById('arcade');
@@ -51,7 +52,7 @@ function init() {
     const mod = await import(`./${id}/game.js`);
     if (my !== token) return;
     const { w, h } = size();
-    game = await mod.create({ ...api, base: `media/games/${id}/`, w, h });
+    game = await mod.create({ ...api, base: `media/games/${id}/`, w, h }); game.id = id;
     if (my !== token) { game.destroy(); return; }
     current = id; root.classList.remove('loading'); resize();
     attract(!reduce);

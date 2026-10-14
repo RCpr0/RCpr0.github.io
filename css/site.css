@@ -296,3 +296,6 @@ footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wr
 .arcade.no-webgl .arcade-screen::after { content: 'This browser can\'t run the 3D games. The store links below show them.'; position: absolute; inset: 0; display: grid; place-items: center; padding: 30px; text-align: center; color: var(--mute); font-size: 14px; }
 @media (max-width: 420px) { .arcade { padding: 12px 10px 10px; } .arcade-tab span { display: none; } .arcade-tab { justify-content: center; } }
 @media (prefers-reduced-motion: reduce) { .arcade-prompt, .arcade-card, .arcade-load i { animation: none; } }
+.arcade-count { position: absolute; left: 50%; top: 40px; transform: translateX(-50%); pointer-events: none !important; background: #fff; color: #4a62c9; font-size: 15px;
+  padding: 4px 14px; border-radius: 10px; border: 2px solid #8fb0ff; box-shadow: 0 3px 0 #8fb0ff; }
+.arcade-count:empty { display: none; }

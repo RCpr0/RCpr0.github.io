@@ -252,6 +252,7 @@ export async function create(ctx) {
       set speed(v) { speed = v; },
       get state() { return { level: LEVELS[lvl], over: G.over, result: G.result, progress: G.progress, onBelt: G.belt.occupiedSpots, auto }; },
       carts: () => G.carts(),
+      nextMove() { if (!G.belt.hasFreeSpot) return null; const c = chooseFor(G.carts().filter(c => c.available)); return c ? this.screenOf(c.x, c.y) : null; },
       screenOf(x, y) { const v = cellPos(x, y).project(camera), r = ctx.canvas.getBoundingClientRect(); return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; },
     },
     destroy() { ctx.canvas.removeEventListener('pointerdown', onPointer); disposeScene(scene); },
