@@ -309,3 +309,31 @@ footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wr
 .arcade-speed { position: absolute; right: 10px; top: 10px; min-width: 52px; min-height: 44px; border: 0; border-radius: 14px; background: #fff3e0; color: #8a5a2b;
   font: 400 16px/1 'Russo One', var(--display); box-shadow: 0 3px 0 #e2b77d; cursor: pointer; }
 .arcade-speed.on { background: #ffb547; color: #4a2a0a; }
+
+/* Play band: one colour section per game. The games draw into a single fixed, transparent canvas (#gl) inside each
+   section's .play-stage rectangle, so the boards float on the colour with only their shadow beneath them. */
+#gl { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 10; }
+.play-band { padding-bottom: 40px; }
+.game-sec { position: relative; background: var(--g-bg); color: var(--g-ink); padding: 56px 0; overflow: hidden; }
+.game-sec::before { content: ''; position: absolute; inset: 0; background: radial-gradient(60% 70% at 55% 45%, #ffffff40, transparent 70%); pointer-events: none; }
+.game-grid { position: relative; display: grid; grid-template-columns: minmax(240px, 0.9fr) minmax(0, 1.5fr) 190px; gap: 28px; align-items: center; }
+.game-copy h3 { font: 800 clamp(40px, 5vw, 64px)/0.95 var(--display); color: var(--g-ink); margin: 14px 0 12px; text-transform: uppercase; letter-spacing: -.01em; }
+.game-icon { width: 64px; height: 64px; border-radius: 16px; box-shadow: 0 10px 24px rgba(0,0,0,.25); }
+.game-copy p { color: var(--g-ink); opacity: .85; font-size: 15px; }
+.game-copy .game-blurb { font-weight: 600; opacity: 1; font-size: 17px; }
+.game-how b { display: block; font: 600 11px/1.4 var(--mono); letter-spacing: .12em; text-transform: uppercase; margin-bottom: 4px; }
+.game-store { display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: 99px; background: var(--g-ink); color: var(--g-bg); font-weight: 700; font-size: 14px; text-decoration: none; }
+.play-stage { position: relative; height: min(76vh, 700px); min-height: 520px; touch-action: none; cursor: pointer; }
+.play-stage .arcade-ui { position: absolute; inset: 0; z-index: 11; pointer-events: none; font-family: 'Russo One', var(--display); }
+.play-stage .arcade-ui > * { pointer-events: auto; }
+.play-stage .arcade-load { position: absolute; inset: 0; display: none; place-items: center; align-content: center; gap: 12px; color: var(--g-ink); font: 600 12px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+.play-stage.loading .arcade-load { display: grid; }
+.play-stage .arcade-card { border-radius: 24px; }
+.game-phone { width: 190px; transform: rotate(4deg); }
+.no-webgl .play-stage::after { content: 'This browser can’t run the 3D games. The store links show them.'; position: absolute; inset: 0; display: grid; place-items: center; padding: 30px; text-align: center; }
+@media (max-width: 1000px) {
+  .game-grid { grid-template-columns: 1fr; gap: 10px; }
+  .game-phone { display: none; }
+  .play-stage { height: min(125vw, 680px); min-height: 0; margin: 0 calc(var(--gutter) * -1); }
+  .game-sec { padding: 40px 0 24px; }
+}

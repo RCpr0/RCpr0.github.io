@@ -62,3 +62,85 @@ export function disposeScene(scene) {
     for (const m of [].concat(o.material || [])) { for (const k in m) if (m[k]?.isTexture) m[k].dispose(); m.dispose(); }
   });
 }
+
+// ---- Look: glossy materials, a light rig with a shadow floor, and a fitted perspective camera ----
+// Colours are pushed 1.22x away from grey after lighting, so pieces stay vivid under tone mapping.
+function saturate(m, k = 1.22) {
+  m.onBeforeCompile = s => { s.fragmentShader = s.fragmentShader.replace('#include <opaque_fragment>', `outgoingLight = mix(vec3(dot(outgoingLight, vec3(.2126,.7152,.0722))), outgoingLight, ${k.toFixed(2)});\n#include <opaque_fragment>`); };
+  m.customProgramCacheKey = () => 'sat' + k;
+  return m;
+}
+// Plastic with a clear top coat (pieces, carts, baskets, houses).
+export function gloss(color, map, o = {}) {
+  return saturate(new THREE.MeshPhysicalMaterial({ color, map: map || null, roughness: 0.38, clearcoat: 0.7, clearcoatRoughness: 0.25, ...o }));
+}
+// Soft surfaces (fur, felt, wood, stone).
+export function matte(color, map, o = {}) {
+  return saturate(new THREE.MeshStandardMaterial({ color, map: map || null, roughness: 0.85, ...o }));
+}
+// Warm key light with a soft shadow, warm sky / plum ground fill, lilac rim; an invisible floor that only shows the shadow.
+export function addRig(scene, { size = 12, floorY = 0, center = new THREE.Vector3() } = {}) {
+  scene.add(new THREE.HemisphereLight('#fff6ee', '#3a2350', 0.45));
+  const key = new THREE.DirectionalLight('#fff3e2', 1.9); key.position.copy(center).add(new THREE.Vector3(5, 10, 6)); key.target.position.copy(center);
+  key.castShadow = true; key.shadow.mapSize.set(1024, 1024); key.shadow.radius = 6; key.shadow.bias = -8e-4; key.shadow.normalBias = 0.02;
+  const c = key.shadow.camera; c.left = c.bottom = -size; c.right = c.top = size; c.near = 0.5; c.far = 60; c.updateProjectionMatrix();
+  scene.add(key, key.target);
+  const rim = new THREE.DirectionalLight('#b9a4ff', 0.9); rim.position.copy(center).add(new THREE.Vector3(-6, 4, -6)); scene.add(rim);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(120, 120), new THREE.ShadowMaterial({ opacity: 0.2 }));
+  floor.rotation.x = -Math.PI / 2; floor.position.set(center.x, floorY, center.z); floor.receiveShadow = true; floor.userData.noShadowCast = true; scene.add(floor);
+  return { key, rim, floor };
+}
+export function castShadows(obj) { obj.traverse(o => { if (o.isMesh && !o.userData.noShadowCast) { o.castShadow = true; o.receiveShadow = true; } }); }
+
+// Perspective camera looking along `dir` (from the board toward the camera), placed so every point fits inside the view
+// with the given NDC margins. Stores the view so the stage can sway it around the same target.
+export function fitPerspective(camera, pts, aspect, { dir, fov = 30, top = 0.12, bottom = 0.12, side = 0.06 } = {}) {
+  camera.fov = fov; camera.aspect = aspect; camera.near = 0.5; camera.far = 400; camera.updateProjectionMatrix();
+  const box = new THREE.Box3().setFromPoints(pts), target = box.getCenter(new THREE.Vector3());
+  let dist = box.getSize(new THREE.Vector3()).length() * 2 / Math.tan(fov * Math.PI / 360);
+  const d = dir.clone().normalize(), v = new THREE.Vector3(), right = new THREE.Vector3(), up = new THREE.Vector3();
+  for (let it = 0; it < 12; it++) {
+    camera.position.copy(target).addScaledVector(d, dist); camera.lookAt(target); camera.updateMatrixWorld();
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    for (const p of pts) { v.copy(p).project(camera); x0 = Math.min(x0, v.x); x1 = Math.max(x1, v.x); y0 = Math.min(y0, v.y); y1 = Math.max(y1, v.y); }
+    // Re-centre inside the allowed window, then scale the distance to fill it.
+    const wantCx = 0, wantCy = (bottom - top) / 2, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    right.setFromMatrixColumn(camera.matrixWorld, 0); up.setFromMatrixColumn(camera.matrixWorld, 1);
+    const halfH = Math.tan(fov * Math.PI / 360) * dist, halfW = halfH * aspect;
+    target.addScaledVector(right, (cx - wantCx) * halfW).addScaledVector(up, (cy - wantCy) * halfH);
+    const sx = (x1 - x0) / (2 - 2 * side), sy = (y1 - y0) / (2 - top - bottom);
+    dist *= Math.max(sx, sy) * 0.85 + 0.15;
+  }
+  camera.position.copy(target).addScaledVector(d, dist); camera.lookAt(target); camera.updateMatrixWorld();
+  camera.userData.view = { target: target.clone(), dir: d.clone(), dist };
+}
+// Turn the fitted view by a small yaw/pitch around its target (idle sway, pointer tilt).
+export function applyView(camera, yaw, pitch) {
+  const v = camera.userData.view; if (!v) return;
+  const d = v.dir.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+  const side = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), d).normalize();
+  d.applyAxisAngle(side, pitch);
+  camera.position.copy(v.target).addScaledVector(d, v.dist); camera.lookAt(v.target); camera.updateMatrixWorld();
+}
+
+// Hover response: the piece under the pointer springs up a little (scale), and settles back when the pointer leaves.
+// Damped spring (k 180, c 16) so it pops slightly past its target before settling.
+export function hoverSprings() {
+  const live = new Map(); let current = null;
+  return {
+    set(obj) {
+      if (obj === current) return;
+      if (current) live.set(current, { ...(live.get(current) || { s: 1, v: 0 }), to: 1 });
+      if (obj) { if (!obj.userData.baseScale) obj.userData.baseScale = obj.scale.clone(); live.set(obj, { ...(live.get(obj) || { s: 1, v: 0 }), to: 1.1 }); }
+      current = obj;
+    },
+    update(dt) {
+      for (const [o, st] of live) {
+        st.v += ((st.to - st.s) * 180 - st.v * 16) * dt; st.s += st.v * dt;
+        if (o.userData.baseScale) o.scale.copy(o.userData.baseScale).multiplyScalar(st.s);
+        if (st.to === 1 && Math.abs(st.s - 1) < 1e-3 && Math.abs(st.v) < 1e-3) { o.scale.copy(o.userData.baseScale); live.delete(o); }
+      }
+    },
+    clear() { for (const o of live.keys()) if (o.userData.baseScale) o.scale.copy(o.userData.baseScale); live.clear(); current = null; },
+  };
+}

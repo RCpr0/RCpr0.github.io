@@ -3,7 +3,8 @@
 // Colours are the shipped ColorConfig palette with its 0.75 saturation cap. Rules live in core.js.
 import { RoundedBoxGeometry } from '../../vendor/RoundedBoxGeometry.js';
 import { MiceGame, TRAY, PICKUP } from './core.js';
-import { toonRamp, tweenList, easeOutBack, easeInOut, disposeScene } from '../common.js';
+import { tweenList, easeOutBack, easeInOut, disposeScene, gloss, matte, addRig, castShadows, fitPerspective } from '../common.js';
+import { hoverSprings } from '../common.js';
 
 const LEVELS = [1, 2, 3];
 const PALETTE = ['#EB3B3B', '#458CF2', '#22B14C', '#FFF200', '#6F3198', '#FF7E00', '#FFA3B1', '#2EBFB8', '#9C5A3C', '#A6A6A6', '#FFFFFF', '#000000', '#FFF9BD', '#00B7EF', '#69D8FA', '#2F3699', '#990030', '#FF61DF', '#ED7EED', '#FFC20E', '#FFF459'];
@@ -13,12 +14,12 @@ export async function create(ctx) {
   let dead = false;
   const { THREE } = ctx;
   const levels = await Promise.all(LEVELS.map(n => fetch(`${ctx.base}level${n}.json`).then(r => r.json())));
-  const scene = new THREE.Scene(); scene.background = new THREE.Color('#f6e7cf');
-  const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 200);
-  scene.add(new THREE.HemisphereLight('#ffffff', '#d9b98f', 2.0));
-  const sun = new THREE.DirectionalLight('#fff3df', 1.3); sun.position.set(-4, 10, 5); scene.add(sun);
-  const ramp = toonRamp(), tweens = tweenList();
-  const toon = c => new THREE.MeshToonMaterial({ color: c, gradientMap: ramp });
+  // Transparent scene: picture, tray and houses float on the section colour, anchored by a soft shadow.
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(30, 1, 0.5, 400);
+  addRig(scene, { size: 14, floorY: -0.26, center: new THREE.Vector3(0, 0, 0) });
+  const tweens = tweenList();
+  const toon = c => gloss(c);
   // Shipped tint: saturation capped at 0.75.
   const tint = i => { const c = new THREE.Color(PALETTE[i] || '#ccc'), hsl = {}; c.getHSL(hsl); return new THREE.Color().setHSL(hsl.h, Math.min(hsl.s, 0.75), hsl.l); };
 
@@ -29,7 +30,7 @@ export async function create(ctx) {
   const mouseCache = new Map();
   function mouseFor(color) {
     if (!mouseCache.has(color)) {
-      const g = new THREE.Group(), fur = toon(tint(color).lerp(new THREE.Color('#ffffff'), 0.15)), pink = toon('#ffb3c1'), dark = toon('#3a2a2a');
+      const g = new THREE.Group(), fur = matte(tint(color).lerp(new THREE.Color('#ffffff'), 0.15), null, { roughness: 0.7 }), pink = matte('#ffb3c1'), dark = gloss('#3a2a2a');
       const body = new THREE.Mesh(new THREE.SphereGeometry(0.28, 14, 10), fur); body.scale.set(1, 0.85, 1.25); body.position.y = 0.26; g.add(body);
       const head = new THREE.Mesh(new THREE.SphereGeometry(0.2, 14, 10), fur); head.position.set(0, 0.42, 0.3); g.add(head);
       for (const s of [-1, 1]) {
@@ -40,7 +41,7 @@ export async function create(ctx) {
       const tail = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(0, 0.2, -0.3), new THREE.Vector3(0.1, 0.25, -0.55), new THREE.Vector3(-0.05, 0.4, -0.7)]), 10, 0.03, 5), pink); g.add(tail);
       mouseCache.set(color, g);
     }
-    const m = mouseCache.get(color).clone(); m.scale.setScalar(1.25); return m;
+    const m = mouseCache.get(color).clone(); m.scale.setScalar(1.25); castShadows(m); return m;
   }
   const label = (n, faded) => {
     const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d');
@@ -50,6 +51,7 @@ export async function create(ctx) {
   };
 
   function build() {
+    hov.clear();
     if (root) scene.remove(root);
     tweens.clear(); endTimer = 0; ctx.hideResult();
     G = new MiceGame(levels[lvl]); ctx.setLevel(`Level ${LEVELS[lvl]}`);
@@ -81,7 +83,7 @@ export async function create(ctx) {
       root.add(g); houses.set(hs, g);
     }
     mice = new Map();
-    refreshHouses(); fit();
+    castShadows(root); refreshHouses(); fit();
   }
   const picPos = (x, y) => new THREE.Vector3((x + 0.5 - G.w / 2) * cp, 0, -((y + 0.5) * cp) - 1.2);
   const slotPos = s => new THREE.Vector3((s - (TRAY - 1) / 2) * SLOT_GAP, 0, 0.9);
@@ -98,18 +100,14 @@ export async function create(ctx) {
   }
   function setLabel(g, n) { const sp = g.userData.label; if (!sp) return; sp.material.map.dispose(); sp.material.map = label(n); sp.material.needsUpdate = true; tweens.add(0.2, k => sp.scale.setScalar(1.1 * (1 + 0.3 * Math.sin(k * Math.PI)))); }
 
+  // A 30-degree lens from 56 degrees up, fitted to the picture, tray and house grid.
   function fit() {
-    const wpx = ctx.renderer.domElement.clientWidth || ctx.w, hpx = ctx.renderer.domElement.clientHeight || ctx.h, aspect = wpx / hpx;
-    camera.position.set(0, Math.sin(PITCH), Math.cos(PITCH)).multiplyScalar(40); camera.lookAt(0, 0, 0); camera.updateMatrixWorld();
+    const aspect = (ctx.el.clientWidth || 1) / (ctx.el.clientHeight || 1);
     const top = -(G.h * cp) - 1.6, bottom = gridTop() + G.rows * HCELL, half = Math.max(G.w * cp / 2 + 0.6, G.cols * HCELL / 2 + 0.4, (TRAY / 2) * SLOT_GAP);
-    const pts = [new THREE.Vector3(-half, 0, top), new THREE.Vector3(half, 0, top), new THREE.Vector3(-half, 0, bottom), new THREE.Vector3(half, 2, bottom)];
-    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
-    for (const p of pts) { const v = p.applyMatrix4(camera.matrixWorldInverse); x0 = Math.min(x0, v.x); x1 = Math.max(x1, v.x); y0 = Math.min(y0, v.y); y1 = Math.max(y1, v.y); }
-    y1 += 1.6; y0 -= 2.4;
-    let hh = (y1 - y0) / 2, hw = (x1 - x0) / 2; if (hw / hh > aspect) hh = hw / aspect; else hw = hh * aspect;
-    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
-    Object.assign(camera, { left: cx - hw, right: cx + hw, top: cy + hh, bottom: cy - hh }); camera.updateProjectionMatrix();
+    const pts = [new THREE.Vector3(-half, 0, top), new THREE.Vector3(half, 0, top), new THREE.Vector3(-half, 0, bottom), new THREE.Vector3(half, 2, bottom), new THREE.Vector3(-half, 2, bottom)];
+    fitPerspective(camera, pts, aspect, { dir: new THREE.Vector3(0, Math.sin(PITCH), Math.cos(PITCH)), top: 0.16, bottom: 0.22 });
   }
+
 
   const ray = new THREE.Raycaster();
   function onPointer(e) {
@@ -120,8 +118,19 @@ export async function create(ctx) {
     // Tilted camera: a tap can graze the house in front too. Prefer the one that can actually move.
     const pick = hits.find(h => G.movable(h.object.userData.house)) || hits[0];
     if (pick) tap(pick.object.userData.house);
+  }  // Hover: a house that can move springs up under the pointer.
+  function onHover(e) {
+    if (auto || G.over) return hov.set(null);
+    const r = ctx.el.getBoundingClientRect();
+    ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camera);
+    const hits = ray.intersectObjects([...houses.values()].map(g => g.children.at(-1)));
+    const p = hits.find(h => G.movable(h.object.userData.house));
+    hov.set(p ? houses.get(p.object.userData.house).userData.box : null);
   }
+
   ctx.canvas.addEventListener('pointerdown', onPointer);
+  const hov = hoverSprings(), leave = () => hov.set(null);
+  ctx.el.addEventListener('pointermove', onHover); ctx.el.addEventListener('pointerleave', leave);
   function tap(hs) {
     const before = G.events.length, r = G.tap(hs);
     if (!r.ok) { ctx.sound('nope'); const g = houses.get(hs), x = g.position.x; tweens.add(0.3, k => { g.position.x = x + Math.sin(k * Math.PI * 4) * 0.08 * (1 - k); }); return r; }
@@ -150,6 +159,7 @@ export async function create(ctx) {
   }
 
   function update(dt) {
+    hov.update(dt);
     if (!G) return;
     const k = speed * (fast ? 2 : 1); let n = Math.max(1, Math.round(dt * 60 * k));
     for (let i = 0; i < n && !G.over; i++) { if (auto) G.autoTap(); G.step(1 / 60); handle(G.events.splice(0)); }
@@ -187,6 +197,6 @@ export async function create(ctx) {
       get state() { return { total: LEVELS.length, level: lvl + 1, over: G.over, result: G.result, progress: G.blocks.filter(b => b.gone).length / G.blocks.length, onBelt: G.parked().length + G.mice.length, auto }; },
       nextMove() { const h = G.botChoice(); if (!h || G.time - G.lastTap < 0.4) return null; const v = houses.get(h).position.clone().setY(0.6).project(camera), r = ctx.canvas.getBoundingClientRect(); return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; },
     },
-    destroy() { dead = true; ctx.canvas.removeEventListener('pointerdown', onPointer); speedBtn.remove(); disposeScene(scene); },
+    destroy() { dead = true; ctx.canvas.removeEventListener('pointerdown', onPointer); ctx.el.removeEventListener('pointermove', onHover); ctx.el.removeEventListener('pointerleave', leave); speedBtn.remove(); disposeScene(scene); },
   };
 }

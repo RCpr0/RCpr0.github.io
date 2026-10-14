@@ -2,7 +2,9 @@
 // sim every frame, a U-shaped belt that wraps the picture, and the cart grid. Rules live in core.js.
 import { SandFlowGame, DT, GAME_CFG } from './core.js';
 import { PALETTE } from './sim/palette.js';
-import { loadModel, loadTexture, toonRamp, tweenList, easeOutBack, easeInOut, disposeScene } from '../common.js';
+import { loadModel, loadTexture, tweenList, easeOutBack, easeInOut, disposeScene, gloss, matte, addRig, castShadows, fitPerspective } from '../common.js';
+import { hoverSprings } from '../common.js';
+import { RoundedBoxGeometry } from '../../vendor/RoundedBoxGeometry.js';
 
 const LEVELS = [1, 2, 3, 4];
 const CELL = 0.7, PIC = 3.6, BELT_Z = -0.95, R = 0.42, BACK = 2.5, CAM_PITCH = 59.5 * Math.PI / 180;
@@ -16,24 +18,24 @@ export async function create(ctx) {
     loadTexture(base + 'cart.webp'), loadTexture(base + 'wall.webp', { repeat: true }), loadTexture(base + 'belt.webp', { repeat: true }),
     Promise.all(LEVELS.map(n => fetch(`${base}level${n}.json`).then(r => r.json()))),
   ]);
-  const scene = new THREE.Scene(); scene.background = new THREE.Color('#2b2340');
-  const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
-  scene.add(new THREE.HemisphereLight('#ffffff', '#5a4a7a', 1.6));
-  const sun = new THREE.DirectionalLight('#ffffff', 1.5); sun.position.set(-2, 6, 4); scene.add(sun);
-  const tweens = tweenList(), ramp = toonRamp();
-  const toon = (color, map) => new THREE.MeshToonMaterial({ color, map: map || null, gradientMap: ramp });
+  // Transparent scene: the board floats on the section colour, anchored by a soft shadow.
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(30, 1, 0.5, 400);
+  addRig(scene, { size: 8, floorY: -0.32, center: new THREE.Vector3(0, 0, 0.5) });
+  const tweens = tweenList();
+  const toon = (color, map) => gloss(color, map);
 
   // Ground: the purple stone around the grid.
   wallTex.repeat.set(6, 8);
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(14, 18), toon('#8f80b8', wallTex)); ground.rotation.x = -Math.PI / 2; ground.position.set(0, -0.02, 2); scene.add(ground);
+  // The cave floor is gone: the belt and grid sit on a rounded slab built per level (see build).
 
   // Picture: a sand texture on a billboard standing on the belt, inside a pale frame.
   const sandData = new Uint8Array(128 * 128 * 4), sandTex = new THREE.DataTexture(sandData, 128, 128);
   sandTex.magFilter = THREE.NearestFilter; sandTex.colorSpace = THREE.SRGBColorSpace;
   const picture = new THREE.Group(); scene.add(picture);
-  const frame = new THREE.Mesh(roundedRect(THREE, PIC + 0.36, PIC + 0.36, 0.22), new THREE.MeshBasicMaterial({ color: '#efeaff' }));
-  const frameIn = new THREE.Mesh(roundedRect(THREE, PIC + 0.1, PIC + 0.1, 0.1), new THREE.MeshBasicMaterial({ color: '#3a2f58' })); frameIn.position.z = 0.005;
-  const pic = new THREE.Mesh(new THREE.PlaneGeometry(PIC, PIC), new THREE.MeshBasicMaterial({ map: sandTex })); pic.position.z = 0.01;
+  const frame = new THREE.Mesh(roundedRect(THREE, PIC + 0.36, PIC + 0.36, 0.22), new THREE.MeshBasicMaterial({ color: '#efeaff', toneMapped: false }));
+  const frameIn = new THREE.Mesh(roundedRect(THREE, PIC + 0.1, PIC + 0.1, 0.1), new THREE.MeshBasicMaterial({ color: '#3a2f58', toneMapped: false })); frameIn.position.z = 0.005;
+  const pic = new THREE.Mesh(new THREE.PlaneGeometry(PIC, PIC), new THREE.MeshBasicMaterial({ map: sandTex, toneMapped: false })); pic.position.z = 0.01;
   picture.add(frame, frameIn, pic);
 
   // Belt: a rounded-rectangle loop. pathT 0..0.5 runs left to right under the picture (sand x 0..127); the rest is the return.
@@ -64,21 +66,26 @@ export async function create(ctx) {
     const c = cartM.min.clone().add(cartM.max).multiplyScalar(0.5);
     body.children.forEach(m => m.position.sub(new THREE.Vector3(c.x, cartM.min.y, c.z)));
     sand.position.y = (cartM.max.y - cartM.min.y) * 0.72;
-    g.add(body); g.userData = { body, sand, mat, ct };
+    g.add(body); g.userData = { body, sand, mat, ct }; castShadows(g);
     return g;
   }
-  const cellMat = toon('#94a3df'), wallMat = toon('#c9c0e6', wallTex);
+  const cellMat = gloss('#94a3df', null, { clearcoat: 0.4 }), wallMat = matte('#c9c0e6', wallTex), slabMat = matte('#4b3c74');
 
   let G, lvl = 0, gridRoot, cartsOnGrid, onBelt, particles, auto = false, warnT = 0, endTimer = 0, speed = 1;
   const pc = particleSystem(THREE); scene.add(pc.points);
 
   function build() {
+    hov.clear();
     if (gridRoot) { scene.remove(gridRoot); }
     if (onBelt) for (const v of onBelt.values()) scene.remove(v.m); // carts the last run left on the belt
     tweens.clear(); pc.clear(); endTimer = 0;
     G = new SandFlowGame(levels[lvl]); ctx.setLevel(`Level ${LEVELS[lvl]}`); ctx.hideResult();
     gridRoot = new THREE.Group(); scene.add(gridRoot);
     cartsOnGrid = new Map(); onBelt = new Map();
+    { // slab under the belt and grid
+      const rows = levels[lvl].gridWidth, z0 = BELT_Z - BACK - 0.7, z1 = BELT_Z + 0.95 + (rows - 0.5) * CELL + 0.45, w = PIC + 2 * R + 1.2;
+      const slab = new THREE.Mesh(new RoundedBoxGeometry(w, 0.3, z1 - z0, 4, 0.14), slabMat); slab.position.set(0, -0.17, (z0 + z1) / 2); slab.receiveShadow = true; gridRoot.add(slab);
+    }
     const { gridWidth: rows, gridHeight: cols } = levels[lvl];
     for (let x = 0; x < rows; x++) for (let y = 0; y < cols; y++) {
       const p = cellPos(x, y), cm = new THREE.Mesh(cellM.parts[0].geometry, cellMat); cm.position.copy(p); cm.scale.setScalar(CELL / 0.64 * 0.96); gridRoot.add(cm);
@@ -91,7 +98,7 @@ export async function create(ctx) {
       const m = makeCart(c.ct); m.position.copy(cellPos(c.x, c.y)); setFacing(m, c.available, false);
       gridRoot.add(m); cartsOnGrid.set(c.x * 64 + c.y, m);
     }
-    fit();
+    castShadows(gridRoot); fit();
   }
   const cols = () => levels[lvl].gridHeight;
   function cellPos(x, y) { return new THREE.Vector3((y - (cols() - 1) / 2) * CELL, 0.03, BELT_Z + 0.95 + x * CELL); }
@@ -106,26 +113,19 @@ export async function create(ctx) {
     tweens.add(0.35, k => { body.rotation.x = from + (to - from) * k; m.scale.setScalar(s0 + (s1 - s0) * k); body.position.y = (up ? 0 : 0.36) + Math.sin(k * Math.PI) * 0.35; }, easeInOut);
   }
 
-  // Camera: shipped pitch (59.5 degrees, orthographic). Bounds come from projecting the picture, belt and grid corners,
-  // so every level fills the screen whatever its grid size.
+  // Camera: the shipped 59.5-degree pitch, now a 30-degree perspective lens fitted to the picture, belt and grid.
   function fit() {
-    const w = ctx.renderer.domElement.clientWidth || ctx.w, h = ctx.renderer.domElement.clientHeight || ctx.h, aspect = w / h;
-    const rows = levels[lvl].gridWidth, gridBottom = BELT_Z + 0.95 + (rows - 0.5) * CELL;
-    const target = new THREE.Vector3(0, 0, 0);
-    camera.position.set(0, Math.sin(CAM_PITCH), Math.cos(CAM_PITCH)).multiplyScalar(30); camera.lookAt(target);
-    camera.updateMatrixWorld();
-    picture.quaternion.copy(camera.quaternion);
-    const up = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
+    const aspect = (ctx.el.clientWidth || 1) / (ctx.el.clientHeight || 1);
+    const rows = levels[lvl].gridWidth, gridBottom = BELT_Z + 0.95 + (rows - 0.5) * CELL, dir = new THREE.Vector3(0, Math.sin(CAM_PITCH), Math.cos(CAM_PITCH));
+    // The picture stands facing the camera direction, its bottom edge just behind the belt's front run.
+    const look = new THREE.Object3D(); look.position.copy(dir); look.lookAt(0, 0, 0); look.rotateY(Math.PI);
+    picture.quaternion.copy(look.quaternion);
+    const up = new THREE.Vector3(0, 1, 0).applyQuaternion(look.quaternion);
     picture.position.set(0, 0.05, BELT_Z - 0.55).addScaledVector(up, PIC / 2 + 0.25); picture.updateMatrixWorld();
     const half = PIC / 2 + 0.2, pts = [new THREE.Vector3(-half, half, 0), new THREE.Vector3(half, half, 0)].map(p => picture.localToWorld(p));
     const gw = (cols() / 2) * CELL + 0.2;
-    pts.push(new THREE.Vector3(-PIC / 2 - R - 0.4, 0, BELT_Z + 0.4), new THREE.Vector3(PIC / 2 + R + 0.4, 0, BELT_Z + 0.4), new THREE.Vector3(-gw, 0, gridBottom + 0.4), new THREE.Vector3(gw, 0, gridBottom + 0.4));
-    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
-    for (const p of pts) { const v = p.clone().applyMatrix4(camera.matrixWorldInverse); x0 = Math.min(x0, v.x); x1 = Math.max(x1, v.x); y0 = Math.min(y0, v.y); y1 = Math.max(y1, v.y); }
-    y1 += 0.35; y0 -= 1.5; // room for the level pill on top and the prompt at the bottom
-    let hh = (y1 - y0) / 2, hw = (x1 - x0) / 2; if (hw / hh > aspect) hh = hw / aspect; else hw = hh * aspect;
-    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
-    camera.left = cx - hw; camera.right = cx + hw; camera.top = cy + hh; camera.bottom = cy - hh; camera.updateProjectionMatrix();
+    pts.push(new THREE.Vector3(-PIC / 2 - R - 0.5, 0, BELT_Z + 0.4), new THREE.Vector3(PIC / 2 + R + 0.5, 0, BELT_Z + 0.4), new THREE.Vector3(-gw, 0, gridBottom + 0.5), new THREE.Vector3(gw, 0, gridBottom + 0.5));
+    fitPerspective(camera, pts, aspect, { dir, top: 0.16, bottom: 0.22 });
   }
 
   // Input: tap a cell.
@@ -137,8 +137,20 @@ export async function create(ctx) {
     if (!ray.ray.intersectPlane(plane, hit)) return;
     const y = Math.round(hit.x / CELL + (cols() - 1) / 2), x = Math.round((hit.z - BELT_Z - 0.95) / CELL);
     tap(x, y);
+  }  // Hover: a cart that can leave springs up under the pointer.
+  function onHover(e) {
+    if (auto || G.over) return hov.set(null);
+    const r = ctx.el.getBoundingClientRect();
+    ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camera);
+    if (!ray.ray.intersectPlane(plane, hit)) return hov.set(null);
+    const y = Math.round(hit.x / CELL + (cols() - 1) / 2), x = Math.round((hit.z - BELT_Z - 0.95) / CELL);
+    const c = G.carts().find(c => c.x === x && c.y === y && c.available);
+    hov.set(c ? cartsOnGrid.get(x * 64 + y) : null);
   }
+
   ctx.canvas.addEventListener('pointerdown', onPointer);
+  const hov = hoverSprings(), leave = () => hov.set(null);
+  ctx.el.addEventListener('pointermove', onHover); ctx.el.addEventListener('pointerleave', leave);
   ctx.canvas.style.touchAction = 'none';
 
   function tap(x, y) {
@@ -181,6 +193,7 @@ export async function create(ctx) {
   }
 
   function update(dt) {
+    hov.update(dt);
     if (!G) return;
     // Fixed 60 Hz ticks; fast-forward runs more of them, never a longer tick.
     let acc = (update.acc || 0) + dt * speed, n = 0;
@@ -257,7 +270,7 @@ export async function create(ctx) {
       nextMove() { if (!G.belt.hasFreeSpot) return null; const c = chooseFor(G.carts().filter(c => c.available)); return c ? this.screenOf(c.x, c.y) : null; },
       screenOf(x, y) { const v = cellPos(x, y).project(camera), r = ctx.canvas.getBoundingClientRect(); return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; },
     },
-    destroy() { dead = true; ctx.canvas.removeEventListener('pointerdown', onPointer); disposeScene(scene); },
+    destroy() { dead = true; ctx.canvas.removeEventListener('pointerdown', onPointer); ctx.el.removeEventListener('pointermove', onHover); ctx.el.removeEventListener('pointerleave', leave); disposeScene(scene); },
   };
 }
 

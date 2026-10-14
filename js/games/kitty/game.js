@@ -3,7 +3,8 @@
 // Rules live in core.js (the level workbench's own code).
 import { RoundedBoxGeometry } from '../../vendor/RoundedBoxGeometry.js';
 import { KittyGame, LEVELS } from './core.js';
-import { loadModel, loadTexture, toonRamp, tweenList, easeOutBack, easeInOut, disposeScene } from '../common.js';
+import { loadModel, loadTexture, tweenList, easeOutBack, easeInOut, disposeScene, gloss, matte, addRig, castShadows, fitPerspective } from '../common.js';
+import { hoverSprings } from '../common.js';
 
 const REGION = ['#ff5a63', '#42ecf5', '#f8f06f', '#518bff', '#8fff51', '#6c94b4', '#fb84e3', '#e0aa36', '#be9df9', '#8bf693', '#fbacfa', '#54beef', '#53f68e', '#aaf8b1', '#fd6e74', '#f779c0'];
 const COATS = ['coat-snowcream.webp', 'coat-graytuxedo.webp', 'coat-chocolate.webp', 'coat-silvertabby.webp', 'coat-charcoalblack.webp'];
@@ -13,34 +14,34 @@ const CELL = 1, GAP = 0.07, PITCH = 52 * Math.PI / 180;
 export async function create(ctx) {
   let dead = false;
   const { THREE, base } = ctx;
-  const [catM, dogM, mouseM, faceTex, dogTex, dogEyes, mouseTex, mouseFace, pawTex, bushTex, roomTex, coats, levels] = await Promise.all([
+  const [catM, dogM, mouseM, faceTex, dogTex, dogEyes, mouseTex, mouseFace, pawTex, bushTex, coats, levels] = await Promise.all([
     loadModel(base + 'Cat.json'), loadModel(base + 'Husky.json'), loadModel(base + 'Mouse.json'),
     loadTexture(base + 'cat-face.webp'), loadTexture(base + 'dog.webp'), loadTexture(base + 'dog-eyes.webp'), loadTexture(base + 'mouse.webp'), loadTexture(base + 'mouse-face.webp'),
-    loadTexture(base + 'paw.webp'), loadTexture(base + 'bush.webp'), loadTexture(base + 'room.webp'),
+    loadTexture(base + 'paw.webp'), loadTexture(base + 'bush.webp'),
     Promise.all(COATS.map(c => loadTexture(base + c))),
     Promise.all(LEVELS.map(n => fetch(`${base}level${n}.json`).then(r => r.json()))),
   ]);
-  const scene = new THREE.Scene(); scene.background = roomTex;
-  const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 200);
-  scene.add(new THREE.HemisphereLight('#ffffff', '#c9a27a', 1.9));
-  const sun = new THREE.DirectionalLight('#fff4e6', 1.6); sun.position.set(-3, 10, 6); scene.add(sun);
-  const ramp = toonRamp(), tweens = tweenList();
-  const toon = (color, map) => new THREE.MeshToonMaterial({ color, map: map || null, gradientMap: ramp });
+  // Transparent scene: the wooden tray floats on the section colour, anchored by a soft shadow.
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(30, 1, 0.5, 400);
+  addRig(scene, { size: 8, floorY: -0.44 });
+  const tweens = tweenList();
+  const toon = (color, map) => gloss(color, map);
 
   // Characters: one group per model, centred on its feet, scaled to a height in board units.
   const faceMat = (tex, cell) => { const t = tex.clone(); if (cell) { t.repeat.set(0.25, 0.25); t.offset.set(...cell); } t.needsUpdate = true;
     return new THREE.MeshLambertMaterial({ map: t, transparent: true, alphaTest: 0.3, side: THREE.DoubleSide }); };
   const catFace = { eye: faceMat(faceTex, [0, 0.75]), mouth: faceMat(faceTex, [0, 0.25]) };
-  const catBody = coats.map(t => toon('#ffffff', t));
+  const catBody = coats.map(t => matte('#ffffff', t, { roughness: 0.8 }));
   function character(M, height, bodyMat, faceFor, nudge = 0) {
     const g = new THREE.Group(), inner = new THREE.Group(), s = height / M.size.y, c = M.min.clone().add(M.max).multiplyScalar(0.5);
     for (const p of M.parts) { const face = /Eye|Face|Mouth/i.test(p.name), m = new THREE.Mesh(p.geometry, face ? faceFor(p.name) : bodyMat); if (face) m.position.z = nudge; inner.add(m); }
     inner.children.forEach(m => m.position.add(new THREE.Vector3(-c.x, -M.min.y, -c.z))); inner.scale.setScalar(s); g.add(inner);
-    const sh = new THREE.Mesh(new THREE.CircleGeometry(0.34, 24).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: 0.18, depthWrite: false })); sh.position.y = 0.01; g.add(sh);
+    castShadows(inner); // real shadows from the key light
     g.userData.inner = inner; return g;
   }
   const makeCat = coat => character(catM, 0.86, catBody[coat], n => /Mouth/.test(n) ? catFace.mouth : catFace.eye);
-  const dogBody = toon('#ffffff', dogTex), dogFace = faceMat(dogEyes, null), mouseBody = toon('#ffffff', mouseTex), mouseFaceMat = faceMat(mouseFace, null);
+  const dogBody = matte('#ffffff', dogTex, { roughness: 0.8 }), dogFace = faceMat(dogEyes, null), mouseBody = matte('#ffffff', mouseTex, { roughness: 0.8 }), mouseFaceMat = faceMat(mouseFace, null);
   const makeDog = () => character(dogM, 0.95, dogBody, () => dogFace, 7);
   const makeMouse = () => character(mouseM, 0.55, mouseBody, () => mouseFaceMat);
   const face = (g, dir) => { const v = VEC[dir]; g.rotation.y = Math.atan2(v[0], v[1]); };
@@ -50,11 +51,12 @@ export async function create(ctx) {
   const crossGeo = new THREE.BoxGeometry(0.42, 0.04, 0.08);
   const tileMats = new Map(), tileMat = c => { if (!tileMats.has(c)) tileMats.set(c, toon(c)); return tileMats.get(c); };
   const pawMats = new Map(), pawMat = c => { if (!pawMats.has(c)) pawMats.set(c, new THREE.MeshBasicMaterial({ map: pawTex, color: new THREE.Color(c).multiplyScalar(0.55), transparent: true, depthWrite: false })); return pawMats.get(c); };
-  const woodMat = toon('#f3d3a2'), woodDark = toon('#e2b77d'), crossMat = new THREE.MeshBasicMaterial({ color: '#5b3b4a', transparent: true, opacity: 0.55 });
+  const woodMat = matte('#f3d3a2', null, { roughness: 0.6 }), woodDark = matte('#e2b77d', null, { roughness: 0.65 }), crossMat = new THREE.MeshBasicMaterial({ color: '#5b3b4a', transparent: true, opacity: 0.55 });
 
   let G, lvl = 0, root, tiles, pieces, trayCats, selected = 0, auto = false, speed = 1, endTimer = 0, crosses, beams, coatOf, hud, banner, hintBtn, botT = 0, busy = 0;
 
   function build() {
+    hov.clear();
     if (root) scene.remove(root);
     tweens.clear(); endTimer = 0; busy = 0; ctx.hideResult();
     const L = levels[lvl]; G = new KittyGame(L); ctx.setLevel(`Level ${L.n}`);
@@ -84,7 +86,7 @@ export async function create(ctx) {
       const ring = new THREE.Mesh(new THREE.RingGeometry(0.42, 0.5, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.9 })); ring.position.copy(m.position).setY(0.1); root.add(ring);
       return { m, hit, ring, dir: d, home: m.position.clone() };
     });
-    select(0); refresh(); fit();
+    castShadows(root); select(0); refresh(); fit();
   }
   function cellPos(i) { const { w, h } = levels[lvl].puzzle.board; return new THREE.Vector3((i % w - (w - 1) / 2) * CELL, 0, (Math.floor(i / w) - (h - 1) / 2) * CELL); }
   function select(k) { selected = k; trayCats.forEach((t, j) => { t.ring.visible = j === k; t.m.position.y = j === k ? 0.25 : 0.08; }); }
@@ -114,21 +116,15 @@ export async function create(ctx) {
     }
   }
 
+  // A 30-degree lens from 58 degrees up, fitted to the tray and the cat tray below it.
   function fit() {
-    const wpx = ctx.renderer.domElement.clientWidth || ctx.w, hpx = ctx.renderer.domElement.clientHeight || ctx.h, aspect = wpx / hpx;
-    const { w, h } = levels[lvl].puzzle.board;
-    camera.position.set(0, Math.sin(PITCH), Math.cos(PITCH)).multiplyScalar(40); camera.lookAt(0, 0, 0); camera.updateMatrixWorld();
+    const aspect = (ctx.el.clientWidth || 1) / (ctx.el.clientHeight || 1), { w, h } = levels[lvl].puzzle.board;
     const pts = [[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([sx, sz]) => new THREE.Vector3(sx * (w / 2 + 0.6), 0, sz * (h / 2 + 0.6)));
-    pts.push(new THREE.Vector3(0, 1.2, h / 2 + 2.2), new THREE.Vector3(0, 1.2, -h / 2 - 0.4));
-    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
-    for (const p of pts) { const v = p.applyMatrix4(camera.matrixWorldInverse); x0 = Math.min(x0, v.x); x1 = Math.max(x1, v.x); y0 = Math.min(y0, v.y); y1 = Math.max(y1, v.y); }
-    y1 += 2.2; y0 -= 1.6; x0 -= 0.3; x1 += 0.3;
-    let hh = (y1 - y0) / 2, hw = (x1 - x0) / 2; if (hw / hh > aspect) hh = hw / aspect; else hw = hh * aspect;
-    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
-    Object.assign(camera, { left: cx - hw, right: cx + hw, top: cy + hh, bottom: cy - hh }); camera.updateProjectionMatrix();
-    // Room background, cover-fitted.
-    const ia = 878 / 1792; roomTex.repeat.set(aspect > ia ? 1 : aspect / ia, aspect > ia ? ia / aspect : 1); roomTex.offset.set((1 - roomTex.repeat.x) / 2, (1 - roomTex.repeat.y) / 2);
+    pts.push(new THREE.Vector3(-1.6, 1.0, h / 2 + 2.1), new THREE.Vector3(1.6, 1.0, h / 2 + 2.1), new THREE.Vector3(0, 1.0, -h / 2 - 0.3));
+    const el = 58 * Math.PI / 180;
+    fitPerspective(camera, pts, aspect, { dir: new THREE.Vector3(0, Math.sin(el), Math.cos(el)), top: 0.26, bottom: 0.2 });
   }
+
 
   // Input: tap a tray cat to pick its facing, tap a square to place it.
   const ray = new THREE.Raycaster();
@@ -139,8 +135,20 @@ export async function create(ctx) {
     const hit = ray.intersectObjects([...trayCats.map(t => t.hit), ...tiles])[0]; if (!hit) return;
     if (hit.object.userData.tray !== undefined) { select(hit.object.userData.tray); ctx.sound('tap'); return; }
     place(hit.object.userData.cell, trayCats[selected].dir);
+  }  // Hover: an open square or a tray cat springs up under the pointer.
+  function onHover(e) {
+    if (auto || G.over || busy) return hov.set(null);
+    const r = ctx.el.getBoundingClientRect();
+    ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camera);
+    const h = ray.intersectObjects([...trayCats.map(t => t.hit), ...tiles])[0]; if (!h) return hov.set(null);
+    if (h.object.userData.tray !== undefined) return hov.set(trayCats[h.object.userData.tray].m);
+    const i = h.object.userData.cell, c = levels[lvl].puzzle.board.cells[i];
+    hov.set(c.kind === 'play' && !G.catAt(i) && !crosses.has(i) ? tiles[i] : null);
   }
+
   ctx.canvas.addEventListener('pointerdown', onPointer);
+  const hov = hoverSprings(), leave = () => hov.set(null);
+  ctx.el.addEventListener('pointermove', onHover); ctx.el.addEventListener('pointerleave', leave);
 
   function place(i, dir) {
     const before = G.lives, r = G.place(i, dir);
@@ -186,6 +194,7 @@ export async function create(ctx) {
   }
 
   function update(dt) {
+    hov.update(dt);
     if (!G) return;
     if (auto && !busy && !G.over) { botT += dt * speed; if (botT > 0.9) { botT = 0; const mv = G.botMove(); if (mv) { select(trayCats.findIndex(t => t.dir === mv.dir)); place(mv.cell, mv.dir); } } }
     // Idle life: cats breathe.
@@ -211,6 +220,6 @@ export async function create(ctx) {
       wrongCell() { const sol = new Set(levels[lvl].puzzle.solution.positions); const i = levels[lvl].puzzle.board.cells.findIndex((c, k) => c.kind === 'play' && !sol.has(k) && !G.catAt(k)); return this.screenOf(cellPos(i).setY(0.3)); },
       screenOf(p) { const v = p.clone().project(camera), r = ctx.canvas.getBoundingClientRect(); return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height }; },
     },
-    destroy() { dead = true; ctx.canvas.removeEventListener('pointerdown', onPointer); hud.remove(); banner.remove(); hintBtn.remove(); disposeScene(scene); },
+    destroy() { dead = true; ctx.canvas.removeEventListener('pointerdown', onPointer); ctx.el.removeEventListener('pointermove', onHover); ctx.el.removeEventListener('pointerleave', leave); hud.remove(); banner.remove(); hintBtn.remove(); disposeScene(scene); },
   };
 }
