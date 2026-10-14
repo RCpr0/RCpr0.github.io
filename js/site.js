@@ -6,7 +6,8 @@ const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 // SFX are synthesized with Web Audio. The buttons always show whether the reel is actually muted.
 window.sound = (() => {
   let on = false, ctx = null;
-  const notes = { pick: [[660, .05]], drop: [[520, .04], [780, .07]], nope: [[180, .09]], clear: [[523, .08], [659, .08], [784, .08], [1047, .25]], star: [[1319, .18]] };
+  const notes = { pick: [[660, .05]], drop: [[520, .04], [780, .07]], nope: [[180, .09]], clear: [[523, .08], [659, .08], [784, .08], [1047, .25]], star: [[1319, .18]],
+    tap: [[740, .04], [990, .05]], full: [[880, .05], [1175, .1]], lose: [[392, .12], [330, .12], [262, .3]] };
   const play = name => {
     if (!on || !notes[name]) return;
     try {
@@ -14,7 +15,7 @@ window.sound = (() => {
       let t = ctx.currentTime;
       for (const [f, d] of notes[name]) {
         const o = ctx.createOscillator(), g = ctx.createGain();
-        o.type = name === 'nope' ? 'sawtooth' : 'triangle'; o.frequency.value = f;
+        o.type = name === 'nope' || name === 'lose' ? 'sawtooth' : 'triangle'; o.frequency.value = f;
         g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.12, t + .01); g.gain.exponentialRampToValueAtTime(.0001, t + d + .08);
         o.connect(g).connect(ctx.destination); o.start(t); o.stop(t + d + .1); t += d;
       }
