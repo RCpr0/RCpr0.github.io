@@ -48,25 +48,29 @@ function init(box) {
   const word = new THREE.Group(); world.add(word);
   key.target = word;
 
-  // ---------------- The letters: 3x5 voxel glyphs, one per game colour ----------------
-  const GLYPH = { P: ['111', '101', '111', '100', '100'], L: ['100', '100', '100', '100', '111'], A: ['010', '101', '111', '101', '101'], Y: ['101', '101', '010', '010', '010'] };
+  // ---------------- The letters: 5x7 voxel glyphs (fine enough to read as letters), one per game colour ----------------
+  const GLYPH = {
+    P: ['11110', '10001', '10001', '11110', '10000', '10000', '10000'], L: ['10000', '10000', '10000', '10000', '10000', '10000', '11111'],
+    A: ['01110', '10001', '10001', '11111', '10001', '10001', '10001'], Y: ['10001', '10001', '01010', '00100', '00100', '00100', '00100'],
+  };
+  const VS = 0.68; // voxel pitch: the letters stay about as big as before, built from more, smaller blocks
   const GAMES = {
     sandflow: { id: 'play-sandflow', name: 'Sand Flow' }, yarn: { id: 'play-yarn', name: 'Yarn Collect' }, mice: { id: 'play-mice', name: 'Mice Flow' },
     kitty: { id: 'play-kitty', name: 'KittyDoku' }, toyland: { id: 'play-toyland', name: 'Toyland Go!' }, all: { id: 'play', name: 'all five games' },
   };
   const LETTERS = [['P', '#ff9a2e', 'sandflow'], ['L', '#a98cf5', 'yarn'], ['A', '#ffc93a', 'mice'], ['Y', '#ff8aa3', 'kitty']].map(([ch, hex, game], i) => ({
-    ch, game, col: new THREE.Color(hex), cx: -6 + i * 4, slam: 0.06 + i * 0.2, landed: false,
+    ch, game, col: new THREE.Color(hex), cx: -6.15 + i * 4.1, slam: 0.06 + i * 0.2, landed: false,
     sq: { x: 0, v: 0 }, hop: { x: 0, v: 0 }, flash: 0, tilt: (i % 2 ? 1 : -1) * (0.5 + 0.2 * i),
   }));
   const voxels = [];
   const rnd = (() => { let s = 7; return () => ((s = (s * 16807) % 2147483647) / 2147483647); })();
   for (const L of LETTERS) GLYPH[L.ch].forEach((row, r) => [...row].forEach((c, gx) => {
     if (c !== '1') return;
-    const lx = gx - 1, ly = 4.5 - r;
+    const lx = (gx - 2) * VS, ly = (6.5 - r) * VS;
     voxels.push({ L, lx, ly, col: L.col.clone().offsetHSL(0, 0, (rnd() - 0.5) * 0.06), pop: { x: 0, v: 0 }, delay: 0.04 + (L.cx + lx + 7.5) / 15 * 0.28 + rnd() * 0.12, spin: new THREE.Vector3(rnd() - 0.5, rnd() - 0.5, rnd() - 0.5).multiplyScalar(9) });
   }));
-  const VOX = 0.96, DEPTH = 1.5;
-  const voxGeo = new RoundedBoxGeometry(VOX, VOX, DEPTH, 3, 0.18);
+  const VOX = 0.94 * VS, DEPTH = 1.25;
+  const voxGeo = new RoundedBoxGeometry(VOX, VOX, DEPTH, 3, 0.13);
   const voxMat = gloss('#ffffff', null, { roughness: 0.28, clearcoat: 1, clearcoatRoughness: 0.12 });
   const vox = new THREE.InstancedMesh(voxGeo, voxMat, voxels.length); vox.castShadow = vox.receiveShadow = true; vox.frustumCulled = false;
   voxels.forEach((v, i) => vox.setColorAt(i, v.col));
@@ -114,11 +118,11 @@ function init(box) {
   // ---------------- The cast: one shipped character per game, each on its letter ----------------
   // spot(): where it stands in `word` space when settled; game: where a tap on it takes you.
   const CAST = [
-    { game: 'yarn', make: () => cast.yarnBall('#ff5c8a', 1.6), spot: () => new THREE.Vector3(LETTERS[1].cx + 0.55, 1.0, 0.15), order: 0 },
-    { game: 'mice', make: () => cast.mouse('#7f9bff', 1.8), spot: () => new THREE.Vector3(LETTERS[2].cx, 5.0, 0), yaw: 0.85, order: 1 },
+    { game: 'yarn', make: () => cast.yarnBall('#ff5c8a', 1.6), spot: () => new THREE.Vector3(LETTERS[1].cx + 0.35, VS, 0.15), order: 0 },
+    { game: 'mice', make: () => cast.mouse('#7f9bff', 1.8), spot: () => new THREE.Vector3(LETTERS[2].cx + 1.5 * VS, 7 * VS, 0), yaw: 0.85, order: 1 },
     { game: 'toyland', make: () => cast.plush('#4fb2ff', 2.1), spot: () => new THREE.Vector3(1.6, -sh + 0.28, 0.55), yaw: -0.35, order: 2, onArrow: true },
-    { game: 'sandflow', make: () => cast.cart('#4f7dff', 1.45), spot: () => new THREE.Vector3(LETTERS[0].cx, 5.0, 0), yaw: 0.35, order: 3 },
-    { game: 'kitty', make: () => cast.cat(2.7), spot: () => new THREE.Vector3(LETTERS[3].cx, 3.0, 0.55), yaw: -0.25, order: 4 },
+    { game: 'sandflow', make: () => cast.cart('#4f7dff', 1.45), spot: () => new THREE.Vector3(LETTERS[0].cx - VS, 7 * VS, 0), yaw: 0.35, order: 3 },
+    { game: 'kitty', make: () => cast.cat(2.2), spot: () => new THREE.Vector3(LETTERS[3].cx + 2 * VS, 7 * VS, 0.2), yaw: -0.25, order: 4 },
   ].map(c => ({ ...c, ready: null, dropAt: Infinity, landed: false, sq: { x: 0, v: 0 }, hop: { x: 0, v: 0 }, delay: 0, root: new THREE.Group() }));
   for (const c of CAST) {
     c.root.visible = false; (c.onArrow ? arrowBody : word).add(c.root);
@@ -129,7 +133,7 @@ function init(box) {
   }
 
   // ---------------- Layout: the canvas bleeds past the box (right edge of the page, down into the play band) ----------------
-  const BASE = { x: 0.1, y: -0.5 };
+  const BASE = { x: 0.1, y: -0.2 }; // turned only slightly, so the word reads face-on
   let SHRINK = [0.65, 1];
   let W = 1, H = 1, bw = 1, bh = 1, phone = false, fall = 22, offL = 0, offT = 0;
   function layout() {
@@ -147,7 +151,7 @@ function init(box) {
     const aspect = fr.w / fr.h, fov = 42, top = phone ? 6.6 : 6.9, bottom = phone ? -5.2 : -6.9;
     world.rotation.set(BASE.x, BASE.y, 0); world.updateMatrixWorld(true);
     const pts = [];
-    for (const x of [-7.6, 7.6]) for (const y of [bottom, top]) for (const z of [-0.8, 0.8]) pts.push(new THREE.Vector3(x, y, z).applyMatrix4(world.matrixWorld));
+    for (const x of [-7.9, 7.9]) for (const y of [bottom, top]) for (const z of [-0.8, 0.8]) pts.push(new THREE.Vector3(x, y, z).applyMatrix4(world.matrixWorld));
     camera.clearViewOffset();
     fitPerspective(camera, pts, aspect, { dir: new THREE.Vector3(0, 0.2, 1), fov, top: 0.02, bottom: 0.1, side: phone ? 0.02 : -0.04 });
     camera.near = 1; camera.far = 300;
