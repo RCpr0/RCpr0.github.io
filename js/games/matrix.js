@@ -1,18 +1,12 @@
-// The "jump in" lens, Matrix style: a black glass lens with green code raining inside it, an orbiting line of code
-// that reads JUMP IN ✦ ANY TIME, a red pill at its heart, a label that keeps decoding itself out of scrambled glyphs
+// The "jump in" lens, Matrix style: a black glass lens with green code raining inside it, a red pill at its heart, a label that keeps decoding itself out of scrambled glyphs
 // and a typed terminal prompt under it. When the visitor takes over, the bot "dissolves": code rains down the whole
 // stage for a moment and YOU'RE IN decodes over the board.
 const GLYPHS = 'アカサタナハマヤラワイキシチニヒミリウクスツヌフムユルエケセテネヘメレオコソトノホモヨロ0123456789Z:.=*+<>';
 const glyph = () => GLYPHS[(Math.random() * GLYPHS.length) | 0];
-const ORBIT = 'JUMP IN ✦ ANY TIME ✦ JUMP IN ✦ ANY TIME ✦ ';
 
-let lensN = 0;
 export function makeLens(mobile) {
-  const pid = 'mx-p' + lensN++;
   const ring = document.createElement('div'); ring.className = 'arcade-ring';
   ring.innerHTML = '<canvas class="mx-rain"></canvas>' +
-    `<svg class="mx-orbit" viewBox="0 0 120 120" aria-hidden="true"><defs><path id="${pid}" d="M60 60m-53 0a53 53 0 1 1 106 0a53 53 0 1 1-106 0"/></defs>` +
-    `<circle cx="60" cy="60" r="45.5" class="mx-ticks"/><text><textPath href="#${pid}" textLength="328">${ORBIT}</textPath></text></svg>` +
     '<i class="mx-pill"></i><b class="mx-label">JUMP IN</b><em class="mx-cap"></em>';
   const cv = ring.querySelector('canvas'), S = 104, dpr = 2;
   cv.width = cv.height = S * dpr;

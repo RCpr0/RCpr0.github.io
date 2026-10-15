@@ -342,22 +342,19 @@ footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wr
 .arcade-ring { position: absolute; z-index: 4; left: 0; top: 0; width: 124px; height: 124px; margin: -62px 0 0 -62px; opacity: 0; transition: opacity .35s, transform .5s cubic-bezier(.3,.8,.3,1); }
 .arcade-ring.cursor { transition: opacity .35s, transform .08s linear; }
 .attract .arcade-ring { opacity: 1; }
-.arcade-ring::before { content: ''; position: absolute; inset: -4px; border-radius: 50%; background: #010a04eb; border: 1.5px solid #39ff7acc;
+.arcade-ring::before { content: ''; position: absolute; inset: 12px; border-radius: 50%; background: #010a04eb; border: 1.5px solid #39ff7acc;
   box-shadow: 0 0 24px 2px #22ff6a66, 0 12px 26px rgba(0,0,0,.45), inset 0 0 12px #22ff6a33; }
 .arcade-ring .mx-rain { position: absolute; left: 16px; top: 16px; width: 92px; height: 92px; border-radius: 50%; background: #010a04;
   box-shadow: 0 0 0 1px #39ff7a55, inset 0 0 18px #000; }
 .arcade-ring::after { content: ''; position: absolute; left: 16px; top: 16px; width: 92px; height: 92px; border-radius: 50%; pointer-events: none;
   background: repeating-linear-gradient(0deg, #0000 0 2px, #00000038 2px 3px), radial-gradient(70% 60% at 35% 25%, #ffffff2e, #0000 55%); }
-.arcade-ring .mx-orbit { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; animation: ring-spin 14s linear infinite; filter: drop-shadow(0 0 3px #22ff6a); }
-.arcade-ring .mx-ticks { fill: none; stroke: #39ff7a66; stroke-width: 1.2; stroke-dasharray: 1.5 4.5; }
-.arcade-ring text { font: 700 10px var(--mono); fill: #8dffb0; letter-spacing: .1em; }
 .arcade-ring .mx-pill { position: absolute; left: 50%; top: 42%; width: 38px; height: 16px; margin: -8px 0 0 -19px; border-radius: 9px; z-index: 1;
   background: linear-gradient(180deg, #ff9a9a 0%, #f0213b 42%, #a3001a 78%, #5c000c 100%); box-shadow: 0 0 14px 3px #ff1e3c99, 0 3px 6px #0009;
   animation: mx-pill 2.4s ease-in-out infinite; }
 .arcade-ring .mx-pill::after { content: ''; position: absolute; left: 6px; right: 8px; top: 2px; height: 4px; border-radius: 3px; background: #ffffffb0; }
 @keyframes mx-pill { 0%, 100% { transform: rotate(-28deg) translateY(0); } 50% { transform: rotate(-20deg) translateY(-3px) scale(1.06); } }
 .arcade-ring .mx-label { position: absolute; left: 0; right: 0; top: 60%; z-index: 1; text-align: center; white-space: nowrap; font: 800 12px/1 var(--mono); letter-spacing: .16em; color: #d8ffe3; text-shadow: 0 0 6px #22ff6a, 0 0 2px #22ff6a; }
-.arcade-ring .mx-cap { position: absolute; left: 50%; top: calc(100% + 4px); transform: translateX(-50%); white-space: nowrap; font: 700 11px/1 var(--mono); font-style: normal; color: #7dffa4;
+.arcade-ring .mx-cap { position: absolute; left: 50%; top: calc(100% - 6px); transform: translateX(-50%); white-space: nowrap; font: 700 11px/1 var(--mono); font-style: normal; color: #7dffa4;
   background: #010a04e6; border: 1px solid #39ff7a66; border-radius: 4px; padding: 5px 8px 4px; box-shadow: 0 0 12px #22ff6a44; }
 .arcade-ring .mx-cap:empty { visibility: hidden; }
 .arcade-ring .mx-cap::after { content: '▍'; margin-left: 2px; animation: mx-blink .9s steps(1) infinite; }
@@ -373,7 +370,7 @@ footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wr
   background: #010a04c4; border: 1px solid #39ff7a88; border-radius: 6px; padding: 12px 18px 10px; opacity: 0; transform: translate(-50%, -50%); white-space: nowrap; }
 .arcade-yay.go { animation: yay 1.5s ease-out forwards; }
 @keyframes yay { 0% { opacity: 0; transform: translate(-50%,-50%) scaleY(.05); } 10% { opacity: 1; transform: translate(-50%,-50%) scaleY(1.15); } 18%, 75% { opacity: 1; transform: translate(-50%,-50%); } 100% { opacity: 0; transform: translate(-50%,-50%) scaleX(1.3) scaleY(.02); } }
-@media (prefers-reduced-motion: reduce) { .arcade-ghost { display: none; } .arcade-ring { left: 50%; top: auto; bottom: 34px; margin: 0 0 0 -62px; transform: none !important; } .arcade-ring .mx-orbit, .arcade-ring .mx-pill, .arcade-ring .mx-cap::after, .arcade-ghost svg { animation: none; } .arcade-yay.go { animation: none; opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .arcade-ghost { display: none; } .arcade-ring { left: 50%; top: auto; bottom: 34px; margin: 0 0 0 -62px; transform: none !important; } .arcade-ring .mx-pill, .arcade-ring .mx-cap::after, .arcade-ghost svg { animation: none; } .arcade-yay.go { animation: none; opacity: 0; } }
 
 /* Store phones beside each game: the store screenshots take turns, sliding in like a phone carousel. */
 .game-phone[data-cycle] img { position: absolute; inset: 0; }
