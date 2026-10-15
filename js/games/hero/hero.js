@@ -134,7 +134,7 @@ function init(box) {
   let W = 1, H = 1, bw = 1, bh = 1, phone = false, fall = 22, offL = 0, offT = 0;
   function layout() {
     const vw = document.documentElement.clientWidth, vh = innerHeight, b = box.getBoundingClientRect();
-    phone = vw < 761; bw = b.width; bh = b.height; SHRINK = phone ? [0.3, 0.68] : [0.65, 1];
+    phone = vw < 761; bw = b.width; bh = b.height; SHRINK = phone ? [0.45, 0.9] : [0.65, 1];
     offL = phone ? -b.left : -Math.min(30, b.left); offT = phone ? -10 : -50;
     const right = vw - b.right, below = phone ? 30 : Math.round(vh * 0.62);
     W = Math.round(bw - offL + right); H = Math.round(bh - offT + below);
@@ -213,7 +213,7 @@ function init(box) {
   function spring(s, dt, k = 190, c = 12) { const n = 3, h = dt / n; for (let i = 0; i < n; i++) { s.v += (-k * s.x - c * s.v) * h; s.x += s.v * h; } }
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e3 = new THREE.Euler(), pos = new THREE.Vector3(), scl = new THREE.Vector3(), tmpC = new THREE.Color(), WHITE = new THREE.Color('#ffffff');
   let t = reduce ? 99 : 0, arrowKick = 0, arrowLanded = reduce, wave = 3.4, tease = 6.6, teased = 0, pour = 0, lastScroll = scrollY, jiggle = 0;
-  const pourOf = d => smooth(d, d + 0.55, pour);
+  const pourOf = d => smooth(d * 0.55, d * 0.55 + 0.5, pour);
 
   // Characters drop in as soon as they're loaded (after the letters are in), one after another.
   let dropSlot = 1.75;
@@ -298,7 +298,8 @@ function init(box) {
     // Scroll: pour progress + a jiggle from scroll speed.
     if (!reduce) {
       const r = box.getBoundingClientRect(), start = r.top + scrollY;
-      pour = clamp01(scrollY / Math.max(200, start + bh * (phone ? 0.75 : 0.85)));
+      // The collapse starts on the first pixel of scroll and is over while most of the hero is still on screen.
+      pour = clamp01(scrollY / Math.max(160, (start + bh) * (phone ? 0.62 : 0.5)));
       jiggle += Math.min(1.5, Math.abs(scrollY - lastScroll) / 120); lastScroll = scrollY; jiggle *= Math.pow(0.02, dt);
     }
     // Letters.

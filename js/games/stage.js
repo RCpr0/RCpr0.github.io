@@ -3,16 +3,16 @@
 // them. The canvas sits in the document (not fixed) and is moved to the current scroll position each frame, so between
 // frames it scrolls with the page and the boards never lag behind their sections. Games load as their section nears
 // the screen, only on-screen games update, and a bot plays each one until the visitor touches it. A ghost hand shows
-// the bot's moves and a spinning "jump in" ring invites the visitor to take over.
+// the bot's moves and a Matrix-style "jump in" lens (matrix.js) invites the visitor to take over.
 import * as THREE from 'three';
 import { RoomEnvironment } from '../vendor/RoomEnvironment.js';
 import { applyView } from './common.js';
+import { makeLens, dissolve } from './matrix.js';
 
 // ?only=<id> loads just that game (used to test one game in isolation).
 const only = new URLSearchParams(location.search).get('only');
 const stages = [...document.querySelectorAll('[data-stage]')].filter(el => !only || el.dataset.stage === only);
-const HAND = '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M24 6c3 0 5 2 5 5v17l2-1V22c0-3 2-5 5-5s5 2 5 5v6l2-1c3 0 5 2 5 5v3l1-1c3 0 5 2 5 5v8c0 9-7 16-16 16h-6c-6 0-10-3-13-8L9 41c-2-3-1-6 1-7 3-2 6-1 8 1l1 2V11c0-3 2-5 5-5z" fill="#fff" stroke="#241b3a" stroke-width="3.2" stroke-linejoin="round"/><path d="M29 28v9M36 28v9M43 33v5" stroke="#241b3a" stroke-width="2.6" stroke-linecap="round"/></svg>';
-const RING = '<svg viewBox="0 0 120 120" aria-hidden="true"><defs><path id="ring-p" d="M60 60m-46 0a46 46 0 1 1 92 0a46 46 0 1 1-92 0"/></defs><circle cx="60" cy="60" r="57" class="ring-bg"/><text><textPath href="#ring-p" textLength="286">JUMP IN ✦ ANY TIME ✦ JUMP IN ✦ ANY TIME ✦</textPath></text><circle cx="60" cy="60" r="27" class="ring-core"/><path d="M53 47l20 13-20 13z" class="ring-play"/></svg>';
+const HAND = '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M24 6c3 0 5 2 5 5v17l2-1V22c0-3 2-5 5-5s5 2 5 5v6l2-1c3 0 5 2 5 5v3l1-1c3 0 5 2 5 5v8c0 9-7 16-16 16h-6c-6 0-10-3-13-8L9 41c-2-3-1-6 1-7 3-2 6-1 8 1l1 2V11c0-3 2-5 5-5z" fill="#03140a" fill-opacity=".86" stroke="#5dff8f" stroke-width="2.6" stroke-linejoin="round"/><path d="M29 28v9M36 28v9M43 33v5" stroke="#5dff8f" stroke-width="2.2" stroke-linecap="round" opacity=".8"/></svg>';
 
 if (stages.length) init();
 
@@ -41,16 +41,16 @@ function init() {
   for (const v of views) {
     const ui = v.el.querySelector('.arcade-ui');
     const card = el('div', 'arcade-card'), reload = el('button', 'arcade-reload');
-    const ghost = el('div', 'arcade-ghost'), ring = el('div', 'arcade-ring'), yay = el('div', 'arcade-yay');
-    ghost.innerHTML = HAND + '<i>BOT</i>'; ring.innerHTML = RING; yay.textContent = 'Your turn!';
+    const ghost = el('div', 'arcade-ghost'), lens = makeLens(mobile), ring = lens.el, yay = el('div', 'arcade-yay');
+    ghost.innerHTML = HAND + '<i>BOT</i>'; yay.textContent = "YOU'RE IN";
     reload.type = 'button'; reload.setAttribute('aria-label', 'Restart this level'); reload.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M17.7 6.3A8 8 0 1 0 20 12h-2.5a5.5 5.5 0 1 1-1.6-3.9L13 11h7V4z" fill="currentColor"/></svg>';
     ui.append(card, reload, ghost, ring, yay); card.hidden = true;
-    Object.assign(v, { ui, card, reload, ghost, ring, yay, hand: { x: 0, y: 0, placed: false, busy: 0 } });
+    Object.assign(v, { ui, card, reload, ghost, ring, lens, yay, hand: { x: 0, y: 0, placed: false, busy: 0 } });
     // Jumping in keeps the level the bot was playing: the visitor carries on from there.
     const takeOver = () => {
       if (!v.auto || !v.game) return;
       v.auto = false; v.el.classList.remove('attract'); v.game.autoplay(false); v.game.takeover ? v.game.takeover() : v.game.restart();
-      if (!reduce) { yay.classList.remove('go'); void yay.offsetWidth; yay.classList.add('go'); }
+      dissolve(ui, yay, reduce);
     };
     v.takeOver = takeOver;
     reload.addEventListener('click', () => { if (!v.game) return; takeOver(); v.card.hidden = true; v.game.reloadLevel ? v.game.reloadLevel() : v.game.restart(); sound('tap'); });
@@ -101,7 +101,7 @@ function init() {
   }
 
   // Ghost hand. Between moves it hovers over the bot's next move (test.nextMove()); botMove() makes it press there, or
-  // press, drag and let go. The "jump in" ring trails the hand, or follows the mouse while it is over the stage.
+  // press, drag and let go. The "jump in" lens trails the hand, or follows the mouse while it is over the stage.
   function local(v, p) { const r = v.el.getBoundingClientRect(); return { x: p.x - r.left, y: p.y - r.top }; }
   function botMove(v, move) {
     if (!v.auto || reduce || !move) return;
@@ -131,8 +131,8 @@ function init() {
     if (v.hover && !mobile) { st.transform = `translate(${v.cx - r.left}px,${v.cy - r.top}px) scale(1)`; v.ring.classList.add('cursor'); }
     else {
       v.ring.classList.remove('cursor');
-      const h = v.hand, x = h.placed ? Math.min(r.width - 56, Math.max(56, h.x + 70)) : r.width / 2, y = h.placed ? Math.min(r.height - 56, Math.max(56, h.y - 70)) : r.height - 80;
-      st.transform = `translate(${x}px,${y}px) scale(.85)`;
+      const h = v.hand, x = h.placed ? Math.min(r.width - 90, Math.max(90, h.x + 80)) : r.width / 2, y = h.placed ? Math.min(r.height - 90, Math.max(70, h.y - 80)) : r.height - 100;
+      st.transform = `translate(${x}px,${y}px) scale(.9)`;
     }
   }
 
@@ -164,6 +164,7 @@ function init() {
         [v.yaw, v.vy] = spring(v.yaw, v.vy, ty, dt); [v.pitch, v.vp] = spring(v.pitch, v.vp, tp, dt);
         if (v.auto) { aimHand(v, now); placeRing(v, r); }
       }
+      if (v.auto) v.lens.tick(now, reduce);
       v.game.update(dt);
       if (!reduce) applyView(v.game.camera, v.yaw, v.pitch);
       const x = r.left, y = H - r.bottom;
