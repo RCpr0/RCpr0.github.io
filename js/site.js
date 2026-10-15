@@ -101,3 +101,33 @@ if (y) y.textContent = String(new Date().getFullYear());
     if ('IntersectionObserver' in window) new IntersectionObserver(es => es.forEach(e => run(e.isIntersecting)), { threshold: 0.3 }).observe(ph);
   });
 })();
+
+// Game dock + "Play my Games": a tap scrolls to that game with its board on screen (the whole section when it fits,
+// otherwise the board centred). The dock shows while any game is on screen and raises the icon of the one in view.
+(() => {
+  const go = id => {
+    const sec = document.getElementById('play-' + id), stage = sec && sec.querySelector('[data-stage]'); if (!sec) return;
+    const navH = document.querySelector('.nav')?.offsetHeight || 0, fits = sec.offsetHeight <= innerHeight - navH;
+    const el = fits ? sec : stage || sec, r = el.getBoundingClientRect();
+    const y = scrollY + r.top - (fits ? navH : (innerHeight - r.height) / 2 + navH / 2);
+    scrollTo({ top: Math.max(0, y), behavior: reduce ? 'auto' : 'smooth' });
+    history.replaceState(null, '', '#play-' + id);
+  };
+  document.querySelectorAll('[data-goto]').forEach(a => a.addEventListener('click', e => { e.preventDefault(); go(a.dataset.goto); }));
+  const dock = document.querySelector('[data-dock]'); if (!dock) return;
+  const secs = [...document.querySelectorAll('.game-sec')], links = [...dock.querySelectorAll('a')];
+  let queued = false;
+  const update = () => {
+    queued = false;
+    let best = null, bestD = Infinity, any = false;
+    for (const s of secs) {
+      const r = s.getBoundingClientRect();
+      if (r.bottom > innerHeight * 0.25 && r.top < innerHeight * 0.75) any = true;
+      const d = Math.abs(r.top + r.height / 2 - innerHeight / 2); if (d < bestD) { bestD = d; best = s; }
+    }
+    dock.classList.toggle('on', any);
+    links.forEach(a => a.classList.toggle('cur', any && best && a.getAttribute('href') === '#' + best.id));
+  };
+  const q = () => { if (!queued) { queued = true; requestAnimationFrame(update); } };
+  addEventListener('scroll', q, { passive: true }); addEventListener('resize', q); update();
+})();

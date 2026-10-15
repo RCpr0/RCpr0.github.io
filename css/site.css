@@ -409,3 +409,21 @@ footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wr
 .hero-3d.bang::before { animation: hero-bang .6s ease-out; }
 @keyframes hero-bang { 0% { opacity: 1; transform: scale(1.18); filter: brightness(2.4); } 100% { opacity: .55; transform: none; filter: none; } }
 @media (prefers-reduced-motion: reduce) { .hero-3d.bang::before { animation: none; } }
+
+/* Game dock: the five playable games as app icons along the bottom while the games are on screen; the one in view is
+   raised with a white rim. A tap scrolls straight to that game's board. */
+.dock { position: fixed; left: 50%; bottom: 16px; z-index: 15; display: flex; gap: 12px; padding: 10px 12px; border-radius: 30px;
+  background: #0b0d12e0; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); box-shadow: 0 14px 40px #0007, inset 0 0 0 1px #ffffff14;
+  transform: translate(-50%, 140%); opacity: 0; pointer-events: none; transition: transform .45s cubic-bezier(.3,1.4,.5,1), opacity .3s; }
+.dock.on { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
+.dock a { position: relative; display: block; width: 58px; height: 58px; border-radius: 17px; transition: transform .25s cubic-bezier(.3,1.6,.5,1); -webkit-tap-highlight-color: transparent; }
+.dock img { width: 100%; height: 100%; display: block; border-radius: inherit; box-shadow: 0 5px 0 #00000059; }
+.dock a:hover { transform: translateY(-4px) scale(1.06); }
+.dock a.cur { transform: translateY(-6px) scale(1.14); }
+.dock a.cur img { box-shadow: 0 0 0 4px #fff, 0 0 0 7px #ffffff33, 0 8px 18px #0008; }
+.dock span { position: absolute; left: 50%; bottom: calc(100% + 12px); transform: translate(-50%, 4px); white-space: nowrap; pointer-events: none;
+  font: 400 12px/1 'Russo One', var(--display); color: #241b3a; background: #fff; padding: 6px 9px 5px; border-radius: 8px; opacity: 0; transition: opacity .15s, transform .15s; }
+.dock a:hover span, .dock a:focus-visible span { opacity: 1; transform: translate(-50%, 0); }
+.dock a:focus-visible { outline: 3px solid var(--acc); outline-offset: 4px; }
+@media (max-width: 760px) { .dock { bottom: max(10px, env(safe-area-inset-bottom)); gap: 8px; padding: 8px 10px; border-radius: 24px; } .dock a { width: 48px; height: 48px; border-radius: 14px; } .dock span { display: none; } }
+@media (prefers-reduced-motion: reduce) { .dock, .dock a { transition: opacity .2s; } }
